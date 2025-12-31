@@ -1,11 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="io.simplezen.simple_telephony">
+    package="io.simplezen.simple_telecom">
 
     <uses-permission android:name="android.permission.BIND_INCALL_SERVICE" />
 
     <application>
         <service
-            android:name="io.simplezen.simple_telephony.SimpleTelecomInCallService"
+            android:name="io.simplezen.simple_telecom.SimpleTelecomInCallService"
             android:enabled="true"
             android:exported="true"
             android:permission="android.permission.BIND_INCALL_SERVICE">

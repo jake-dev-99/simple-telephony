@@ -1,4 +1,4 @@
-package io.simplezen.simple_telephony
+package io.simplezen.simple_telecom
 
 import android.app.Activity
 import android.content.Context

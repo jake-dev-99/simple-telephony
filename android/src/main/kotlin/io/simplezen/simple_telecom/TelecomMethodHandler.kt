@@ -1,4 +1,4 @@
-package io.simplezen.simple_telephony
+package io.simplezen.simple_telecom
 
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel

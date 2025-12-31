@@ -1,4 +1,4 @@
-package io.simplezen.simple_telephony
+package io.simplezen.simple_telecom
 
 import android.app.role.RoleManager
 import android.content.Context
