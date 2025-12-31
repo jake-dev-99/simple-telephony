@@ -11,9 +11,14 @@ import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodChannel
 import org.json.JSONObject
 
-internal object InboundTelecom {
+/**
+ * Handles dispatching call events from native code to Flutter via MethodChannel.
+ * This class is public so that consumer apps can use their own InCallService
+ * implementation while still routing events through simple-telephony's channel.
+ */
+object InboundTelecom {
     private const val TAG = "InboundTelecom"
-    private const val CHANNEL_NAME = "io.simplezen.simple_telephony/inbound"
+    const val CHANNEL_NAME = "io.simplezen.simple_telephony/inbound"
 
     private var applicationContext: Context? = null
     private var binaryMessenger: BinaryMessenger? = null
