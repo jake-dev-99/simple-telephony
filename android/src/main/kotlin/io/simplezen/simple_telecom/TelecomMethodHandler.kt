@@ -18,7 +18,7 @@ internal class TelecomMethodHandler(
                     result.error("invalid-args", "phoneNumber is required", null)
                     return
                 }
-                result.success(callManager.placeCall(phoneNumber))
+                result.success(callManager.placeCall(phoneNumber).toMap())
             }
 
             "answerPhoneCall" -> {
@@ -27,7 +27,7 @@ internal class TelecomMethodHandler(
                     result.error("invalid-args", "callId is required", null)
                     return
                 }
-                result.success(callManager.answerCall(callId))
+                result.success(callManager.answerCall(callId).toMap())
             }
 
             "endPhoneCall" -> {
@@ -36,7 +36,7 @@ internal class TelecomMethodHandler(
                     result.error("invalid-args", "callId is required", null)
                     return
                 }
-                result.success(callManager.endCall(callId))
+                result.success(callManager.endCall(callId).toMap())
             }
 
             "isDefaultDialerApp" -> {
@@ -56,6 +56,26 @@ internal class TelecomMethodHandler(
                     }
                 }
             }
+
+            "registerBackgroundHandler" -> {
+                val arguments = call.arguments as? Map<*, *>
+                val dispatcherHandle = (arguments?.get("dispatcherHandle") as? Number)?.toLong()
+                val handlerHandle = (arguments?.get("handlerHandle") as? Number)?.toLong()
+                if (dispatcherHandle == null || handlerHandle == null) {
+                    result.error("invalid-args", "dispatcherHandle and handlerHandle are required", null)
+                    return
+                }
+
+                TelecomServiceRuntime.registerBackgroundHandler(
+                    dispatcherHandle = dispatcherHandle,
+                    userHandle = handlerHandle,
+                )
+                result.success(null)
+            }
+
+            "initializeForeground" -> result.success(null)
+
+            "getCurrentCalls" -> result.success(TelecomServiceRuntime.currentCalls())
 
             else -> result.notImplemented()
         }

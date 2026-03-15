@@ -8,38 +8,26 @@ internal class SimpleTelecomInCallService : InCallService() {
     private val callCallback = object : Call.Callback() {
         override fun onStateChanged(call: Call, state: Int) {
             super.onStateChanged(call, state)
-            val entry = CallRegistry.entryFor(call) ?: CallRegistry.register(call)
-            CallEventDispatcher.onCallStateChanged(applicationContext, entry, state)
+            TelecomServiceRuntime.onCallStateChanged(call, state)
         }
 
         override fun onDetailsChanged(call: Call, details: Call.Details) {
             super.onDetailsChanged(call, details)
-            CallRegistry.entryFor(call)
-            val direction = when (call.state) {
-                Call.STATE_RINGING -> CallRegistry.CallDirection.INCOMING
-                else -> CallRegistry.CallDirection.OUTGOING
-            }
-            CallRegistry.updateDirection(call, direction)
-        }
-
-        override fun onCallDestroyed(call: Call) {
-            super.onCallDestroyed(call)
-            val entry = CallRegistry.unregister(call)
-            CallEventDispatcher.onCallRemoved(applicationContext, entry, call.details?.disconnectCause)
+            TelecomServiceRuntime.onCallDetailsChanged(call)
         }
     }
 
     override fun onCallAdded(call: Call) {
         super.onCallAdded(call)
         Log.d(TAG, "Call added: ${call.details}")
-        val entry = CallRegistry.register(call)
         call.registerCallback(callCallback)
-        CallEventDispatcher.onCallAdded(applicationContext, entry)
+        TelecomServiceRuntime.initialize(applicationContext)
+        TelecomServiceRuntime.onCallAdded(call)
     }
 
     override fun onCallRemoved(call: Call) {
-        val entry = CallRegistry.unregister(call)
-        CallEventDispatcher.onCallRemoved(applicationContext, entry, call.details?.disconnectCause)
+        TelecomServiceRuntime.initialize(applicationContext)
+        TelecomServiceRuntime.onCallRemoved(call, call.details?.disconnectCause)
         call.unregisterCallback(callCallback)
         super.onCallRemoved(call)
     }

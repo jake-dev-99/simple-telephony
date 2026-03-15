@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 /// Represents a phone call event emitted from the Android host layer.
 class PhoneCallEvent {
   PhoneCallEvent({
+    this.eventId,
     required this.callId,
     required this.state,
     required this.isIncoming,
@@ -12,6 +13,9 @@ class PhoneCallEvent {
     this.disconnectCause,
     Map<String, dynamic>? extras,
   }) : extras = extras == null ? const {} : Map.unmodifiable(extras);
+
+  /// Unique identifier for this emitted event.
+  final String? eventId;
 
   /// Platform-provided identifier for the call instance.
   final String callId;
@@ -46,6 +50,7 @@ class PhoneCallEvent {
 
   factory PhoneCallEvent.fromRaw(Map<String, dynamic> raw) {
     return PhoneCallEvent(
+      eventId: raw['eventId']?.toString(),
       callId: raw['callId']?.toString() ?? '',
       state: (raw['state']?.toString() ?? 'unknown').toLowerCase(),
       isIncoming: raw['isIncoming'] == true,
@@ -60,6 +65,7 @@ class PhoneCallEvent {
   }
 
   Map<String, Object?> toJson() => <String, Object?>{
+        'eventId': eventId,
         'callId': callId,
         'state': state,
         'isIncoming': isIncoming,
@@ -77,6 +83,7 @@ class PhoneCallEvent {
   @override
   bool operator ==(Object other) {
     return other is PhoneCallEvent &&
+        other.eventId == eventId &&
         other.callId == callId &&
         other.state == state &&
         other.isIncoming == isIncoming &&
@@ -94,6 +101,7 @@ class PhoneCallEvent {
         phoneNumber,
         displayName,
         disconnectCause,
+        eventId,
         Object.hashAll(
           extras.entries
               .map((entry) => Object.hash(entry.key, entry.value))

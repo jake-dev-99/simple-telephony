@@ -33,23 +33,31 @@ internal class CallManager(private val context: Context) {
         activityBinding = null
     }
 
-    fun placeCall(phoneNumber: String): Boolean {
+    fun placeCall(phoneNumber: String): CallControlResult {
         return try {
             val uri = Uri.fromParts("tel", phoneNumber, null)
             telecomManager.placeCall(uri, Bundle())
-            true
+            CallControlResult(CallControlStatus.success)
         } catch (security: SecurityException) {
             Log.e(TAG, "Security exception placing call", security)
-            false
+            CallControlResult(
+                CallControlStatus.permissionDenied,
+                security.message ?: "Permission denied placing call",
+            )
         } catch (throwable: Throwable) {
             Log.e(TAG, "Unexpected error placing call", throwable)
-            false
+            CallControlResult(
+                CallControlStatus.platformFailure,
+                throwable.message ?: "Unexpected error placing call",
+            )
         }
     }
 
-    fun answerCall(callId: String): Boolean = CallRegistry.answer(callId)
+    fun answerCall(callId: String): CallControlResult =
+        TelecomServiceRuntime.answerCall(callId)
 
-    fun endCall(callId: String): Boolean = CallRegistry.end(callId)
+    fun endCall(callId: String): CallControlResult =
+        TelecomServiceRuntime.endCall(callId)
 
     fun isDefaultDialerApp(): Boolean {
         return telecomManager.defaultDialerPackage == context.packageName

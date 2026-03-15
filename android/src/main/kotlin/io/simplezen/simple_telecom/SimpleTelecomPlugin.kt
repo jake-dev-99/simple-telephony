@@ -1,6 +1,5 @@
 package io.simplezen.simple_telecom
 
-import android.app.Activity
 import android.content.Context
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
@@ -10,8 +9,6 @@ import io.flutter.plugin.common.MethodChannel
 class SimpleTelecomPlugin : FlutterPlugin, ActivityAware {
 
     private lateinit var applicationContext: Context
-    private var activity: Activity? = null
-    private var activityBinding: ActivityPluginBinding? = null
 
     private var actionsChannel: MethodChannel? = null
     private var callManager: CallManager? = null
@@ -19,14 +16,15 @@ class SimpleTelecomPlugin : FlutterPlugin, ActivityAware {
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         applicationContext = binding.applicationContext
-        InboundTelecom.initialize(applicationContext, binding.binaryMessenger)
+        TelecomServiceRuntime.initialize(applicationContext)
+        TelecomServiceRuntime.foregroundBridge().attach(binding.binaryMessenger)
 
         callManager = CallManager(applicationContext)
         methodHandler = TelecomMethodHandler(callManager!!)
 
         actionsChannel = MethodChannel(
             binding.binaryMessenger,
-            "io.simplezen.simple_telephony/telecom_actions",
+            TelecomConstants.ACTIONS_CHANNEL,
         ).also { channel ->
             channel.setMethodCallHandler(methodHandler)
         }
@@ -37,12 +35,10 @@ class SimpleTelecomPlugin : FlutterPlugin, ActivityAware {
         actionsChannel = null
         methodHandler = null
         callManager = null
-        InboundTelecom.detach()
+        TelecomServiceRuntime.foregroundBridge().detach()
     }
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
-        activity = binding.activity
-        activityBinding = binding
         callManager?.attach(binding)
     }
 
@@ -60,7 +56,5 @@ class SimpleTelecomPlugin : FlutterPlugin, ActivityAware {
 
     private fun detachActivity() {
         callManager?.detach()
-        activityBinding = null
-        activity = null
     }
 }

@@ -1,15 +1,22 @@
 library simple_telephony;
 
 import 'dart:async';
-import 'dart:convert';
+import 'dart:ui' show CallbackHandle, DartPluginRegistrant, PluginUtilities;
 
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 
+import 'src/call_control_result.dart';
 import 'src/phone_call_event.dart';
+import 'src/phone_call_snapshot.dart';
 
+export 'src/call_control_result.dart';
 export 'src/phone_call_event.dart';
+export 'src/phone_call_snapshot.dart';
 
-typedef CallEventHandler = Future<bool> Function(PhoneCallEvent event);
+typedef CallEventHandler = Future<void> Function(PhoneCallEvent event);
+typedef BackgroundCallEventHandler = Future<void> Function(
+    PhoneCallEvent event);
 
 /// High-level facade for interacting with the Android telephony bridge.
 class SimpleTelecom {
@@ -19,70 +26,147 @@ class SimpleTelecom {
 
   static const MethodChannel _actionsChannel =
       MethodChannel('io.simplezen.simple_telephony/telecom_actions');
-  static const MethodChannel _inboundChannel =
-      MethodChannel('io.simplezen.simple_telephony/inbound');
+  static const EventChannel _foregroundEventsChannel =
+      EventChannel('io.simplezen.simple_telephony/foreground_events');
+  static const MethodChannel _backgroundEventsChannel =
+      MethodChannel('io.simplezen.simple_telephony/background_events');
 
-  static CallEventHandler? _callEventHandler;
-  static bool _initialized = false;
+  static Stream<PhoneCallEvent>? _events;
+  static StreamSubscription<void>? _foregroundSubscription;
 
-  /// Wires the inbound method channel so call events can be surfaced to Dart.
-  static Future<void> initialize({
-    required CallEventHandler onCallEvent,
-  }) async {
-    _callEventHandler = onCallEvent;
-    if (_initialized) {
-      return;
-    }
-    _inboundChannel.setMethodCallHandler(_handleInboundCallMethod);
-    _initialized = true;
-  }
+  /// Streams native telephony events to the foreground isolate.
+  Stream<PhoneCallEvent> get events => _events ??= _foregroundEventsChannel
+          .receiveBroadcastStream()
+          .map((dynamic event) {
+        return PhoneCallEvent.fromRaw(Map<String, dynamic>.from(event as Map));
+      }).asBroadcastStream();
 
-  /// Places an outbound phone call using [phoneNumber].
-  Future<bool> placePhoneCall(String phoneNumber) async =>
-      _invokeBool('placePhoneCall', phoneNumber);
+  /// Registers a top-level or static background handler for headless delivery.
+  static Future<void> registerBackgroundHandler(
+    BackgroundCallEventHandler handler,
+  ) async {
+    final CallbackHandle? userHandle =
+        PluginUtilities.getCallbackHandle(handler);
+    final CallbackHandle? dispatcherHandle =
+        PluginUtilities.getCallbackHandle(simpleTelephonyBackgroundDispatcher);
 
-  /// Attempts to answer the call represented by [callId].
-  Future<bool> answerPhoneCall(String callId) async =>
-      _invokeBool('answerPhoneCall', callId);
-
-  /// Attempts to hang up the call represented by [callId].
-  Future<bool> endPhoneCall(String callId) async =>
-      _invokeBool('endPhoneCall', callId);
-
-  /// Returns whether this app currently holds the default dialer role.
-  Future<bool> isDefaultDialerApp() async =>
-      _invokeBool('isDefaultDialerApp', null);
-
-  /// Requests the default dialer role. Returns true if granted.
-  Future<bool> requestDefaultDialerApp() async =>
-      _invokeBool('requestDefaultDialerApp', null);
-
-  Future<bool> _invokeBool(String method, [Object? argument]) async {
-    final dynamic result = await _actionsChannel.invokeMethod(method, argument);
-    return result == true;
-  }
-
-  static Future<bool> _handleInboundCallMethod(MethodCall call) async {
-    if (call.method != 'receiveCallEvent') {
-      return false;
-    }
-
-    final handler = _callEventHandler;
-    if (handler == null) {
-      return false;
-    }
-
-    if (call.arguments is! String) {
-      throw PlatformException(
-        code: 'INVALID_ARGUMENT_TYPE',
-        message:
-            'Expected a JSON-encoded payload for receiveCallEvent but got ${call.arguments.runtimeType}',
+    if (userHandle == null || dispatcherHandle == null) {
+      throw ArgumentError(
+        'Background handlers must be top-level or static functions.',
       );
     }
 
-    final Map<String, dynamic> decoded =
-        jsonDecode(call.arguments as String) as Map<String, dynamic>;
-    final event = PhoneCallEvent.fromRaw(decoded);
-    return await handler(event);
+    await _actionsChannel.invokeMethod<void>('registerBackgroundHandler', {
+      'dispatcherHandle': dispatcherHandle.toRawHandle(),
+      'handlerHandle': userHandle.toRawHandle(),
+    });
   }
+
+  /// Attaches a foreground listener and primes the native bridge.
+  static Future<void> initializeForeground({
+    required CallEventHandler onCallEvent,
+  }) async {
+    await _actionsChannel.invokeMethod<void>('initializeForeground');
+    await _foregroundSubscription?.cancel();
+    _foregroundSubscription =
+        SimpleTelecom.instance.events.asyncMap(onCallEvent).listen((_) {});
+  }
+
+  /// Returns the current native call snapshots from persisted state.
+  Future<List<PhoneCallSnapshot>> getCurrentCalls() async {
+    final List<dynamic> rawCalls =
+        await _actionsChannel.invokeMethod<List<dynamic>>('getCurrentCalls') ??
+            const <dynamic>[];
+
+    return rawCalls
+        .map(
+          (dynamic raw) => PhoneCallSnapshot.fromRaw(
+            Map<String, dynamic>.from(raw as Map),
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  /// Places an outbound phone call using [phoneNumber].
+  Future<CallControlResult> placePhoneCall(String phoneNumber) async =>
+      _invokeControl('placePhoneCall', phoneNumber);
+
+  /// Attempts to answer the call represented by [callId].
+  Future<CallControlResult> answerPhoneCall(String callId) async =>
+      _invokeControl('answerPhoneCall', callId);
+
+  /// Attempts to hang up the call represented by [callId].
+  Future<CallControlResult> endPhoneCall(String callId) async =>
+      _invokeControl('endPhoneCall', callId);
+
+  /// Returns whether this app currently holds the default dialer role.
+  Future<bool> isDefaultDialerApp() async =>
+      (await _actionsChannel.invokeMethod<bool>('isDefaultDialerApp')) == true;
+
+  /// Requests the default dialer role. Returns true if granted.
+  Future<bool> requestDefaultDialerApp() async =>
+      (await _actionsChannel.invokeMethod<bool>('requestDefaultDialerApp')) ==
+      true;
+
+  Future<CallControlResult> _invokeControl(
+    String method, [
+    Object? argument,
+  ]) async {
+    final dynamic raw = await _actionsChannel.invokeMethod(method, argument);
+    return CallControlResult.fromRaw(Map<String, dynamic>.from(raw as Map));
+  }
+}
+
+/// Entrypoint used by Android to bootstrap a headless isolate for call events.
+@pragma('vm:entry-point')
+Future<void> simpleTelephonyBackgroundDispatcher() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  DartPluginRegistrant.ensureInitialized();
+
+  final int? rawHandlerHandle =
+      await SimpleTelecom._actionsChannel.invokeMethod<int>(
+    'getBackgroundHandlerHandle',
+  );
+  final CallbackHandle? callbackHandle = rawHandlerHandle == null
+      ? null
+      : CallbackHandle.fromRawHandle(rawHandlerHandle);
+  final Function? callback = callbackHandle == null
+      ? null
+      : PluginUtilities.getCallbackFromHandle(callbackHandle);
+
+  if (callback != null && callback is! BackgroundCallEventHandler) {
+    throw StateError(
+      'Registered background handler has the wrong signature: '
+      '${callback.runtimeType}',
+    );
+  }
+
+  final BackgroundCallEventHandler? typedCallback =
+      callback as BackgroundCallEventHandler?;
+
+  SimpleTelecom._backgroundEventsChannel
+      .setMethodCallHandler((MethodCall call) async {
+    if (call.method != 'deliverBackgroundEvent') {
+      return;
+    }
+
+    if (typedCallback == null) {
+      return;
+    }
+
+    final Map<String, dynamic> rawEvent =
+        Map<String, dynamic>.from(call.arguments as Map);
+    final event = PhoneCallEvent.fromRaw(rawEvent);
+    await typedCallback(event);
+
+    if (event.eventId != null && event.eventId!.isNotEmpty) {
+      await SimpleTelecom._actionsChannel.invokeMethod<void>(
+        'ackBackgroundEvent',
+        event.eventId,
+      );
+    }
+  });
+
+  await SimpleTelecom._actionsChannel
+      .invokeMethod<void>('backgroundDispatcherReady');
 }
