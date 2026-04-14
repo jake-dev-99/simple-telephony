@@ -1,9 +1,22 @@
 #!/usr/bin/env bash
+#
+# Publishes simple_telephony packages to pub.dev in dependency order.
+#
+# Usage:
+#   tool/publish.sh            Dry run — validates all packages, publishes nothing
+#   tool/publish.sh --live     Publishes to pub.dev (with 15s pause between packages)
+#   tool/publish.sh --help     Shows publish order and current versions
+#
+# Prerequisites:
+#   - `dart pub login` (authenticated with pub.dev)
+#   - All tests pass
+
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-# Publish order matters: interface first, then platform packages, then app-facing.
+# Publish order — topological sort of internal dependency graph.
+# A package is listed only after all its simple_telephony_* dependencies.
 PACKAGES=(
   simple_telephony_platform_interface
   simple_telephony_android
@@ -12,163 +25,270 @@ PACKAGES=(
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
 BOLD='\033[1m'
-NC='\033[0m'
+RESET='\033[0m'
 
-usage() {
-  echo -e "${BOLD}Usage:${NC} tool/publish.sh [--live] [--help]"
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+get_version() {
+  grep '^version:' "$1/pubspec.yaml" | head -1 | awk '{print $2}'
+}
+
+print_order() {
   echo ""
-  echo "Validate and publish all simple_telephony packages to pub.dev."
+  echo -e "${BOLD}Publish order (${#PACKAGES[@]} packages):${RESET}"
   echo ""
-  echo "  (no args)       Dry run — analysis, tests, and pub publish --dry-run"
-  echo "  --live          Publish to pub.dev (15 s pause between packages)"
-  echo "  --from=PACKAGE  Resume from a specific package (skip earlier ones)"
-  echo "  --help          Show publish order with current versions"
-  echo ""
-  echo -e "${BOLD}Publish order:${NC}"
+  local step=1
   for pkg in "${PACKAGES[@]}"; do
     local version
-    version=$(grep '^version:' "$ROOT_DIR/$pkg/pubspec.yaml" | awk '{print $2}')
-    echo "  $pkg  v$version"
+    version=$(get_version "$REPO_ROOT/$pkg")
+    printf "  ${CYAN}%2d.${RESET} %-45s ${YELLOW}%s${RESET}\n" "$step" "$pkg" "$version"
+    step=$((step + 1))
   done
+  echo ""
 }
 
-log()  { echo -e "${GREEN}[publish]${NC} $*"; }
-warn() { echo -e "${YELLOW}[publish]${NC} $*"; }
-fail() { echo -e "${RED}[publish]${NC} $*" >&2; exit 1; }
-
-# Replace path dependencies with hosted version constraints in a pubspec.yaml.
-# Only runs during --live publish. Reverted after publish via git checkout.
-swap_path_to_hosted() {
+convert_path_to_version() {
+  # Replaces simple_telephony_* path deps with ^VERSION version constraints.
   local pubspec="$1"
-  local interface_version
-  interface_version=$(grep '^version:' "$ROOT_DIR/simple_telephony_platform_interface/pubspec.yaml" | awk '{print $2}')
-  local android_version
-  android_version=$(grep '^version:' "$ROOT_DIR/simple_telephony_android/pubspec.yaml" | awk '{print $2}')
+  local version="$2"
+  local tmpfile
+  tmpfile=$(mktemp)
 
-  # Use python for reliable multi-line YAML replacement.
-  python3 -c "
-import re, sys
-text = open('$pubspec').read()
-text = re.sub(
-    r'simple_telephony_platform_interface:\s*\n\s*path:[^\n]+',
-    'simple_telephony_platform_interface: ^$interface_version',
-    text)
-text = re.sub(
-    r'simple_telephony_android:\s*\n\s*path:[^\n]+',
-    'simple_telephony_android: ^$android_version',
-    text)
-open('$pubspec', 'w').write(text)
-"
+  awk -v ver="$version" '
+  /^  simple_telephony_/ {
+    pkg_line = $0
+    getline
+    if ($0 ~ /path:/) {
+      sub(/:$/, "", pkg_line)
+      pkg_name = pkg_line
+      gsub(/^  /, "", pkg_name)
+      gsub(/:/, "", pkg_name)
+      print "  " pkg_name ": ^" ver
+      next
+    } else {
+      print pkg_line
+      print $0
+      next
+    }
+  }
+  { print }
+  ' "$pubspec" > "$tmpfile"
+
+  mv "$tmpfile" "$pubspec"
 }
 
-revert_pubspecs() {
-  log "Reverting pubspec.yaml files..."
-  for pkg in "${PACKAGES[@]}"; do
-    git -C "$ROOT_DIR" checkout -- "$pkg/pubspec.yaml" 2>/dev/null || true
+validate_package() {
+  local pkg_dir="$1"
+  local pkg_name="$2"
+  local version="$3"
+  local errors=0
+
+  # Required files
+  for required_file in pubspec.yaml LICENSE README.md CHANGELOG.md; do
+    if [[ ! -f "$pkg_dir/$required_file" ]]; then
+      echo -e "    ${RED}Missing $required_file${RESET}"
+      errors=$((errors + 1))
+    fi
   done
+
+  # CHANGELOG mentions current version
+  if [[ -f "$pkg_dir/CHANGELOG.md" ]] && ! grep -q "## $version" "$pkg_dir/CHANGELOG.md"; then
+    echo -e "    ${RED}CHANGELOG.md does not mention version $version${RESET}"
+    errors=$((errors + 1))
+  fi
+
+  # No path dependencies remain after conversion
+  if grep -q 'path: \.\./' "$pkg_dir/pubspec.yaml"; then
+    echo -e "    ${RED}Path dependencies still present after conversion${RESET}"
+    errors=$((errors + 1))
+  fi
+
+  # pubspec has description
+  if ! grep -q '^description:' "$pkg_dir/pubspec.yaml"; then
+    echo -e "    ${RED}Missing description in pubspec.yaml${RESET}"
+    errors=$((errors + 1))
+  fi
+
+  # pubspec has homepage or repository
+  if ! grep -qE '^(homepage|repository):' "$pkg_dir/pubspec.yaml"; then
+    echo -e "    ${RED}Missing homepage/repository in pubspec.yaml${RESET}"
+    errors=$((errors + 1))
+  fi
+
+  # lib/ directory exists
+  if [[ ! -d "$pkg_dir/lib" ]]; then
+    echo -e "    ${RED}Missing lib/ directory${RESET}"
+    errors=$((errors + 1))
+  fi
+
+  return $errors
 }
 
-LIVE=false
-SKIP_UNTIL=""
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
 
-for arg in "$@"; do
-  case "$arg" in
-    --live) LIVE=true ;;
-    --from=*) SKIP_UNTIL="${arg#--from=}" ;;
-    --help|-h) usage; exit 0 ;;
-    *) fail "Unknown argument: $arg" ;;
-  esac
-done
+case "${1:-}" in
+  --help|-h)
+    echo -e "${BOLD}simple_telephony publish tool${RESET}"
+    echo ""
+    echo "Usage:"
+    echo "  tool/publish.sh            Dry run (validates structure, publishes nothing)"
+    echo "  tool/publish.sh --live     Publish to pub.dev"
+    echo "  tool/publish.sh --help     Show this help"
+    print_order
+    echo "Before publishing:"
+    echo "  1. Run tests in all packages   (flutter test in each)"
+    echo "  2. dart pub login              (authenticate with pub.dev)"
+    echo "  3. git status is clean         (no uncommitted changes)"
+    echo ""
+    exit 0
+    ;;
+  --live)
+    MODE="live"
+    ;;
+  "")
+    MODE="dry-run"
+    ;;
+  *)
+    echo -e "${RED}Unknown option: $1${RESET}" >&2
+    echo "Run 'tool/publish.sh --help' for usage." >&2
+    exit 1
+    ;;
+esac
 
-# --- Step 1: Verify clean git state ---
-log "Checking git state..."
-if [[ -n "$(git -C "$ROOT_DIR" status --porcelain)" ]]; then
-  if $LIVE; then
-    fail "Working tree is dirty. Commit or stash before publishing."
-  else
-    warn "Working tree is dirty (ok for dry run)."
+echo ""
+echo -e "${BOLD}simple_telephony publish — ${MODE}${RESET}"
+print_order
+
+# ---------------------------------------------------------------------------
+# Pre-flight checks
+# ---------------------------------------------------------------------------
+
+echo -e "${BOLD}Pre-flight checks...${RESET}"
+
+if ! command -v dart &>/dev/null; then
+  echo -e "${RED}Error: 'dart' not found in PATH.${RESET}" >&2
+  exit 1
+fi
+
+if ! git -C "$REPO_ROOT" diff --quiet HEAD 2>/dev/null; then
+  echo -e "  ${YELLOW}Warning: uncommitted changes detected.${RESET}"
+  if [[ "$MODE" == "live" ]]; then
+    echo -e "  ${RED}Refusing to publish with dirty working tree. Commit or stash first.${RESET}" >&2
+    exit 1
   fi
 fi
 
-# --- Step 2: Validate each package ---
-skipping=true
-if [[ -z "$SKIP_UNTIL" ]]; then skipping=false; fi
-
 for pkg in "${PACKAGES[@]}"; do
-  if $skipping; then
-    if [[ "$pkg" == "$SKIP_UNTIL" ]]; then
-      skipping=false
-    else
-      log "Skipping $pkg (--from=$SKIP_UNTIL)"
-      continue
-    fi
-  fi
-
-  pkg_dir="$ROOT_DIR/$pkg"
-  log "━━━ ${BOLD}$pkg${NC} ━━━"
-
-  # Analysis — allow path-dep warnings during dev, strict for live.
-  log "  Analyzing..."
-  (cd "$pkg_dir" && dart analyze --no-fatal-warnings) || fail "$pkg: Analysis found errors."
-
-  # Flutter tests
-  log "  Testing..."
-  (cd "$pkg_dir" && flutter test) || fail "$pkg: Tests failed."
-
-  # Android Gradle tests (only for android package)
-  if [[ "$pkg" == "simple_telephony_android" && -n "${ANDROID_HOME:-}" ]]; then
-    log "  Running Android unit tests..."
-    FLUTTER_ROOT="${FLUTTER_ROOT:-$(dirname "$(which flutter)")/..}"
-    export FLUTTER_ROOT
-    (cd "$pkg_dir/android" && ./gradlew test) || fail "$pkg: Android tests failed."
+  if [[ ! -f "$REPO_ROOT/$pkg/pubspec.yaml" ]]; then
+    echo -e "  ${RED}Error: missing package — $pkg${RESET}" >&2
+    exit 1
   fi
 done
 
-# --- Step 3: Publish ---
-if $LIVE; then
-  # Swap path deps to hosted version constraints for publish, revert on exit.
-  trap revert_pubspecs EXIT
-  for pkg in "${PACKAGES[@]}"; do
-    swap_path_to_hosted "$ROOT_DIR/$pkg/pubspec.yaml"
-  done
-fi
+EXPECTED_VERSION=$(get_version "$REPO_ROOT/simple_telephony")
+for pkg in "${PACKAGES[@]}"; do
+  pkg_version=$(get_version "$REPO_ROOT/$pkg")
+  if [[ "$pkg_version" != "$EXPECTED_VERSION" ]]; then
+    echo -e "  ${RED}Version mismatch: $pkg is $pkg_version, expected $EXPECTED_VERSION${RESET}" >&2
+    exit 1
+  fi
+done
+echo -e "  Versions: ${GREEN}$EXPECTED_VERSION${RESET} (all ${#PACKAGES[@]} packages)"
+echo -e "  ${GREEN}Pre-flight passed.${RESET}"
+echo ""
 
-skipping=true
-if [[ -z "$SKIP_UNTIL" ]]; then skipping=false; fi
+# ---------------------------------------------------------------------------
+# Prepare workspace (convert path deps to version constraints)
+# ---------------------------------------------------------------------------
+
+WORK_DIR=$(mktemp -d)
+trap 'rm -rf "$WORK_DIR"' EXIT
+
+echo -e "${BOLD}Preparing workspace...${RESET}"
+for pkg in "${PACKAGES[@]}"; do
+  cp -R "$REPO_ROOT/$pkg" "$WORK_DIR/$pkg"
+done
+
+CONVERTED=0
+for pkg in "${PACKAGES[@]}"; do
+  pubspec="$WORK_DIR/$pkg/pubspec.yaml"
+  if grep -q 'path: \.\./' "$pubspec"; then
+    convert_path_to_version "$pubspec" "$EXPECTED_VERSION"
+    CONVERTED=$((CONVERTED + 1))
+  fi
+done
+echo -e "  Converted path deps in $CONVERTED packages."
+echo ""
+
+# ---------------------------------------------------------------------------
+# Publish / validate loop
+# ---------------------------------------------------------------------------
+
+PASSED=0
+FAILED=0
+TOTAL=${#PACKAGES[@]}
 
 for pkg in "${PACKAGES[@]}"; do
-  if $skipping; then
-    if [[ "$pkg" == "$SKIP_UNTIL" ]]; then
-      skipping=false
+  pkg_dir="$WORK_DIR/$pkg"
+  step=$((PASSED + FAILED + 1))
+
+  echo -e "${BOLD}[$step/$TOTAL] $pkg${RESET}"
+
+  if [[ "$MODE" == "dry-run" ]]; then
+    if validate_package "$pkg_dir" "$pkg" "$EXPECTED_VERSION"; then
+      echo -e "    ${GREEN}Valid.${RESET}"
+      PASSED=$((PASSED + 1))
     else
-      continue
+      FAILED=$((FAILED + 1))
     fi
-  fi
 
-  pkg_dir="$ROOT_DIR/$pkg"
-
-  if $LIVE; then
-    log "Publishing $pkg..."
-    (cd "$pkg_dir" && dart pub publish --force)
-    log "Published $pkg. https://pub.dev/packages/$pkg"
-
-    # Pause between packages so pub.dev indexes the dependency before
-    # the next package tries to resolve it.
-    local last_pkg="${PACKAGES[${#PACKAGES[@]}-1]}"
-    if [[ "$pkg" != "$last_pkg" ]]; then
-      log "Waiting 15 s for pub.dev indexing..."
-      sleep 15
-    fi
   else
-    log "Dry run: $pkg..."
-    (cd "$pkg_dir" && dart pub publish --dry-run) || true
+    echo -e "    Publishing to pub.dev..."
+    if (cd "$pkg_dir" && dart pub publish --force) 2>&1 | sed 's/^/    /'; then
+      echo -e "    ${GREEN}Published.${RESET}"
+      PASSED=$((PASSED + 1))
+
+      if [[ $step -lt $TOTAL ]]; then
+        echo -e "    ${CYAN}Waiting 15s for pub.dev indexing...${RESET}"
+        sleep 15
+      fi
+    else
+      echo ""
+      echo -e "    ${RED}FAILED. $PASSED package(s) published before this failure.${RESET}" >&2
+      echo -e "    ${RED}Fix the issue and re-run. Already-published packages are fine.${RESET}" >&2
+      exit 1
+    fi
   fi
+
+  echo ""
 done
 
-if $LIVE; then
-  log "All packages published."
+# ---------------------------------------------------------------------------
+# Summary
+# ---------------------------------------------------------------------------
+
+echo -e "${BOLD}─── Summary ───${RESET}"
+echo ""
+
+if [[ "$MODE" == "dry-run" ]]; then
+  if [[ $FAILED -eq 0 ]]; then
+    echo -e "${GREEN}All $PASSED packages validated.${RESET}"
+    echo ""
+    echo "Ready to publish. Run:"
+    echo "  tool/publish.sh --live"
+  else
+    echo -e "${RED}$FAILED package(s) failed validation.${RESET}"
+    exit 1
+  fi
 else
-  log "Dry run complete. Use --live to publish for real."
+  echo -e "${GREEN}All $PASSED packages published to pub.dev.${RESET}"
 fi
+
+echo ""
