@@ -21,9 +21,10 @@ usage() {
   echo ""
   echo "Validate and publish all simple_telephony packages to pub.dev."
   echo ""
-  echo "  (no args)   Dry run — analysis, tests, and pub publish --dry-run"
-  echo "  --live      Publish to pub.dev (15 s pause between packages)"
-  echo "  --help      Show publish order with current versions"
+  echo "  (no args)       Dry run — analysis, tests, and pub publish --dry-run"
+  echo "  --live          Publish to pub.dev (15 s pause between packages)"
+  echo "  --from=PACKAGE  Resume from a specific package (skip earlier ones)"
+  echo "  --help          Show publish order with current versions"
   echo ""
   echo -e "${BOLD}Publish order:${NC}"
   for pkg in "${PACKAGES[@]}"; do
@@ -46,19 +47,20 @@ swap_path_to_hosted() {
   local android_version
   android_version=$(grep '^version:' "$ROOT_DIR/simple_telephony_android/pubspec.yaml" | awk '{print $2}')
 
-  # Replace multi-line path deps with single-line hosted deps.
-  sed -i.bak \
-    -e "/simple_telephony_platform_interface:/{n;s|.*path:.*|  simple_telephony_platform_interface: ^${interface_version}|;}" \
-    -e "/simple_telephony_android:/{n;s|.*path:.*|  simple_telephony_android: ^${android_version}|;}" \
-    "$pubspec"
-
-  # Clean up: remove lines that are now just the package name with no value
-  # (the sed above replaces the path: line but leaves the original key: line)
-  sed -i.bak \
-    '/^  simple_telephony_platform_interface:$/d;/^  simple_telephony_android:$/d' \
-    "$pubspec"
-
-  rm -f "${pubspec}.bak"
+  # Use python for reliable multi-line YAML replacement.
+  python3 -c "
+import re, sys
+text = open('$pubspec').read()
+text = re.sub(
+    r'simple_telephony_platform_interface:\s*\n\s*path:[^\n]+',
+    'simple_telephony_platform_interface: ^$interface_version',
+    text)
+text = re.sub(
+    r'simple_telephony_android:\s*\n\s*path:[^\n]+',
+    'simple_telephony_android: ^$android_version',
+    text)
+open('$pubspec', 'w').write(text)
+"
 }
 
 revert_pubspecs() {
@@ -69,10 +71,12 @@ revert_pubspecs() {
 }
 
 LIVE=false
+SKIP_UNTIL=""
 
 for arg in "$@"; do
   case "$arg" in
     --live) LIVE=true ;;
+    --from=*) SKIP_UNTIL="${arg#--from=}" ;;
     --help|-h) usage; exit 0 ;;
     *) fail "Unknown argument: $arg" ;;
   esac
@@ -89,7 +93,19 @@ if [[ -n "$(git -C "$ROOT_DIR" status --porcelain)" ]]; then
 fi
 
 # --- Step 2: Validate each package ---
+skipping=true
+if [[ -z "$SKIP_UNTIL" ]]; then skipping=false; fi
+
 for pkg in "${PACKAGES[@]}"; do
+  if $skipping; then
+    if [[ "$pkg" == "$SKIP_UNTIL" ]]; then
+      skipping=false
+    else
+      log "Skipping $pkg (--from=$SKIP_UNTIL)"
+      continue
+    fi
+  fi
+
   pkg_dir="$ROOT_DIR/$pkg"
   log "━━━ ${BOLD}$pkg${NC} ━━━"
 
@@ -119,7 +135,18 @@ if $LIVE; then
   done
 fi
 
+skipping=true
+if [[ -z "$SKIP_UNTIL" ]]; then skipping=false; fi
+
 for pkg in "${PACKAGES[@]}"; do
+  if $skipping; then
+    if [[ "$pkg" == "$SKIP_UNTIL" ]]; then
+      skipping=false
+    else
+      continue
+    fi
+  fi
+
   pkg_dir="$ROOT_DIR/$pkg"
 
   if $LIVE; then
@@ -129,7 +156,8 @@ for pkg in "${PACKAGES[@]}"; do
 
     # Pause between packages so pub.dev indexes the dependency before
     # the next package tries to resolve it.
-    if [[ "$pkg" != "${PACKAGES[-1]}" ]]; then
+    local last_pkg="${PACKAGES[${#PACKAGES[@]}-1]}"
+    if [[ "$pkg" != "$last_pkg" ]]; then
       log "Waiting 15 s for pub.dev indexing..."
       sleep 15
     fi
