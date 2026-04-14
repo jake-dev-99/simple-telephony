@@ -1,4 +1,4 @@
-package io.simplezen.simple_telecom
+package io.simplezen.simple_telephony
 
 import android.content.Context
 import io.flutter.embedding.engine.plugins.FlutterPlugin
@@ -6,7 +6,7 @@ import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 import io.flutter.plugin.common.MethodChannel
 
-class SimpleTelecomPlugin : FlutterPlugin, ActivityAware {
+class SimpleTelephonyPlugin : FlutterPlugin, ActivityAware {
 
     private lateinit var applicationContext: Context
 
