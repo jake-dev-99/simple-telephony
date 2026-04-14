@@ -10,12 +10,20 @@ export 'package:simple_telephony_platform_interface/simple_telephony_platform_in
         CallControlResult,
         CallControlStatus,
         CallEventHandler,
+        CallLogEntry,
+        CallLogFilter,
+        CallLogSort,
+        CallLogSortField,
+        CallType,
+        DeviceInfo,
         PhoneCallBase,
         PhoneCallDirection,
         PhoneCallEvent,
         PhoneCallSnapshot,
         PhoneCallState,
-        PhoneCallStateX;
+        PhoneCallStateX,
+        SimCard,
+        SortDirection;
 
 /// High-level facade for Android telephony via `InCallService`.
 ///
@@ -29,8 +37,8 @@ class SimpleTelephonyNative {
   /// The singleton instance used for all telephony operations.
   static final SimpleTelephonyNative instance = SimpleTelephonyNative._();
 
-  static SimpleTelephonyNativePlatform get _platform =>
-      SimpleTelephonyNativePlatform.instance;
+  static SimpleTelephonyPlatform get _platform =>
+      SimpleTelephonyPlatform.instance;
 
   static StreamSubscription<void>? _foregroundSubscription;
 
@@ -114,6 +122,30 @@ class SimpleTelephonyNative {
   /// Requests the default dialer role. Returns true if granted.
   Future<bool> requestDefaultDialerApp() =>
       _platform.requestDefaultDialerApp();
+
+  /// Lists call-log (history) entries matching the given typed filter.
+  ///
+  /// Requires `READ_CALL_LOG` permission (request via
+  /// `simple_permissions_native`).
+  Future<List<CallLogEntry>> listCallLog({
+    CallLogFilter? filter,
+    CallLogSort? sort,
+    int? limit,
+    int? offset,
+  }) =>
+      _platform.listCallLog(
+        filter: filter,
+        sort: sort,
+        limit: limit,
+        offset: offset,
+      );
+
+  /// Returns basic device info (build, Android version, SIM slot count).
+  Future<DeviceInfo> getDeviceInfo() => _platform.getDeviceInfo();
+
+  /// Enumerates active SIM subscriptions on the device. Requires
+  /// `READ_PHONE_STATE`.
+  Future<List<SimCard>> listSimCards() => _platform.listSimCards();
 }
 
 /// Entrypoint used by Android to bootstrap a headless isolate for call events.
@@ -122,8 +154,8 @@ Future<void> simpleTelephonyBackgroundDispatcher() async {
   WidgetsFlutterBinding.ensureInitialized();
   DartPluginRegistrant.ensureInitialized();
 
-  final MethodChannelSimpleTelephonyNative platform =
-      SimpleTelephonyNativePlatform.instance as MethodChannelSimpleTelephonyNative;
+  final MethodChannelSimpleTelephony platform =
+      SimpleTelephonyPlatform.instance as MethodChannelSimpleTelephony;
 
   final int? rawHandlerHandle =
       await platform.actionsChannel.invokeMethod<int>(

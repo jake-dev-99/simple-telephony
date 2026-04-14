@@ -3,7 +3,7 @@ description: >-
   Android telephony plugin for Flutter. Receive and control phone calls via
   InCallService when registered as the default dialer. Supports foreground
   event streaming and background delivery with at-least-once guarantees.
-version: 0.1.0
+version: 0.2.0
 homepage: https://www.simplezen.io/development
 
 topics:
