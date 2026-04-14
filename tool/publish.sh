@@ -213,7 +213,15 @@ trap 'rm -rf "$WORK_DIR"' EXIT
 
 echo -e "${BOLD}Preparing workspace...${RESET}"
 for pkg in "${PACKAGES[@]}"; do
-  cp -R "$REPO_ROOT/$pkg" "$WORK_DIR/$pkg"
+  rsync -a \
+    --exclude='build/' \
+    --exclude='.dart_tool/' \
+    --exclude='.flutter-plugins' \
+    --exclude='.flutter-plugins-dependencies' \
+    --exclude='.packages' \
+    --exclude='android/.gradle/' \
+    --exclude='android/build/' \
+    "$REPO_ROOT/$pkg/" "$WORK_DIR/$pkg/"
 done
 
 CONVERTED=0
@@ -251,7 +259,10 @@ for pkg in "${PACKAGES[@]}"; do
 
   else
     echo -e "    Publishing to pub.dev..."
-    if (cd "$pkg_dir" && dart pub publish --force) 2>&1 | sed 's/^/    /'; then
+    pub_output=$( (cd "$pkg_dir" && dart pub publish --force) 2>&1) || true
+    echo "$pub_output" | sed 's/^/    /'
+
+    if echo "$pub_output" | grep -q "Successfully uploaded"; then
       echo -e "    ${GREEN}Published.${RESET}"
       PASSED=$((PASSED + 1))
 
@@ -259,11 +270,12 @@ for pkg in "${PACKAGES[@]}"; do
         echo -e "    ${CYAN}Waiting 15s for pub.dev indexing...${RESET}"
         sleep 15
       fi
+    elif echo "$pub_output" | grep -q "already exists"; then
+      echo -e "    ${YELLOW}Already published — skipping.${RESET}"
+      PASSED=$((PASSED + 1))
     else
-      echo ""
-      echo -e "    ${RED}FAILED. $PASSED package(s) published before this failure.${RESET}" >&2
-      echo -e "    ${RED}Fix the issue and re-run. Already-published packages are fine.${RESET}" >&2
-      exit 1
+      echo -e "    ${RED}Failed.${RESET}"
+      FAILED=$((FAILED + 1))
     fi
   fi
 
@@ -288,7 +300,12 @@ if [[ "$MODE" == "dry-run" ]]; then
     exit 1
   fi
 else
-  echo -e "${GREEN}All $PASSED packages published to pub.dev.${RESET}"
+  if [[ $FAILED -eq 0 ]]; then
+    echo -e "${GREEN}All $PASSED packages published to pub.dev.${RESET}"
+  else
+    echo -e "${RED}$FAILED package(s) failed to publish. $PASSED succeeded.${RESET}"
+    exit 1
+  fi
 fi
 
 echo ""
