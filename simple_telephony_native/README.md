@@ -1,4 +1,4 @@
-# simple_telephony
+# simple_telephony_native_native
 
 Android-only Flutter plugin for phone call management via `InCallService`.
 
@@ -18,7 +18,7 @@ TelecomServiceRuntime          ← native singleton, source of truth
 └── BackgroundFlutterBridge    ← headless FlutterEngine → Dart callback (at-least-once)
         │
         ▼
-SimpleTelephony                ← Dart facade your app talks to
+SimpleTelephonyNative                ← Dart facade your app talks to
 ```
 
 **Key design decisions:**
@@ -38,7 +38,7 @@ SimpleTelephony                ← Dart facade your app talks to
 ### 1. Become the default dialer
 
 ```dart
-final granted = await SimpleTelephony.instance.requestDefaultDialerApp();
+final granted = await SimpleTelephonyNative.instance.requestDefaultDialerApp();
 ```
 
 The system will show a role-request dialog. Until your app holds the default
@@ -54,7 +54,7 @@ Future<void> onBackgroundCallEvent(PhoneCallEvent event) async {
   // Persist the event, send a notification, etc.
 }
 
-await SimpleTelephony.registerBackgroundHandler(onBackgroundCallEvent);
+await SimpleTelephonyNative.registerBackgroundHandler(onBackgroundCallEvent);
 ```
 
 The handler **must** be a top-level or static function (it is looked up by
@@ -63,7 +63,7 @@ callback handle across isolates). Register it once during app startup.
 ### 3. Listen for foreground events
 
 ```dart
-await SimpleTelephony.initializeForeground(
+await SimpleTelephonyNative.initializeForeground(
   onCallEvent: (PhoneCallEvent event) async {
     // Update your UI.
   },
@@ -76,16 +76,16 @@ Only one foreground listener is active at a time. Calling
 ### 4. Recover state after restart
 
 ```dart
-final calls = await SimpleTelephony.instance.getCurrentCalls();
+final calls = await SimpleTelephonyNative.instance.getCurrentCalls();
 // calls is List<PhoneCallSnapshot> — the persisted state of all active calls.
 ```
 
 ### 5. Control calls
 
 ```dart
-final answer = await SimpleTelephony.instance.answerPhoneCall(callId);
-final end    = await SimpleTelephony.instance.endPhoneCall(callId);
-final place  = await SimpleTelephony.instance.placePhoneCall('+15551234567');
+final answer = await SimpleTelephonyNative.instance.answerPhoneCall(callId);
+final end    = await SimpleTelephonyNative.instance.endPhoneCall(callId);
+final place  = await SimpleTelephonyNative.instance.placePhoneCall('+15551234567');
 
 if (!answer.isSuccess) {
   print('${answer.status}: ${answer.message}');
@@ -103,7 +103,7 @@ asynchronously via `onCallAdded`.
 ### 6. Clean up
 
 ```dart
-await SimpleTelephony.disposeForegroundListener();
+await SimpleTelephonyNative.disposeForegroundListener();
 ```
 
 ## Status codes

@@ -1,4 +1,4 @@
-name: simple_telephony
+name: simple_telephony_native
 description: >-
   Android telephony plugin for Flutter. Receive and control phone calls via
   InCallService when registered as the default dialer. Supports foreground

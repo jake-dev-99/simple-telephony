@@ -1,8 +1,8 @@
 # simple_telephony_platform_interface
 
-A common platform interface for the [`simple_telephony`](https://pub.dev/packages/simple_telephony) plugin.
+A common platform interface for the [`simple_telephony_native`](https://pub.dev/packages/simple_telephony_native) plugin.
 
-This interface allows platform-specific implementations of `simple_telephony` to ensure they support the same interface. If you are implementing a new platform, extend [`SimpleTelephonyPlatform`](lib/src/platform_interface.dart) with an implementation that satisfies the contract.
+This interface allows platform-specific implementations of `simple_telephony_native` to ensure they support the same interface. If you are implementing a new platform, extend [`SimpleTelephonyPlatform`](lib/src/platform_interface.dart) with an implementation that satisfies the contract.
 
 ## Usage
 

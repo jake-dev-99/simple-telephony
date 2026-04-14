@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Publishes simple_telephony packages to pub.dev in dependency order.
+# Publishes simple_telephony_native packages to pub.dev in dependency order.
 #
 # Usage:
 #   tool/publish.sh            Dry run — validates all packages, publishes nothing
@@ -20,7 +20,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PACKAGES=(
   simple_telephony_platform_interface
   simple_telephony_android
-  simple_telephony
+  simple_telephony_native
 )
 
 RED='\033[0;31m'
@@ -53,7 +53,7 @@ print_order() {
 }
 
 convert_path_to_version() {
-  # Replaces simple_telephony_* path deps with ^VERSION version constraints.
+  # Replaces simple_telephony_native_* path deps with ^VERSION version constraints.
   local pubspec="$1"
   local version="$2"
   local tmpfile
@@ -135,7 +135,7 @@ validate_package() {
 
 case "${1:-}" in
   --help|-h)
-    echo -e "${BOLD}simple_telephony publish tool${RESET}"
+    echo -e "${BOLD}simple_telephony_native publish tool${RESET}"
     echo ""
     echo "Usage:"
     echo "  tool/publish.sh            Dry run (validates structure, publishes nothing)"
@@ -163,7 +163,7 @@ case "${1:-}" in
 esac
 
 echo ""
-echo -e "${BOLD}simple_telephony publish — ${MODE}${RESET}"
+echo -e "${BOLD}simple_telephony_native publish — ${MODE}${RESET}"
 print_order
 
 # ---------------------------------------------------------------------------
@@ -192,7 +192,9 @@ for pkg in "${PACKAGES[@]}"; do
   fi
 done
 
-EXPECTED_VERSION=$(get_version "$REPO_ROOT/simple_telephony")
+EXPECTED_VERSION=$(get_version "$REPO_ROOT/simple_telephony_native")
+# Note: the app-facing package is "simple_telephony_native" but
+# child packages use "simple_telephony_*" (without _native).
 for pkg in "${PACKAGES[@]}"; do
   pkg_version=$(get_version "$REPO_ROOT/$pkg")
   if [[ "$pkg_version" != "$EXPECTED_VERSION" ]]; then

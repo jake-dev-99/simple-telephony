@@ -22,15 +22,15 @@ export 'package:simple_telephony_platform_interface/simple_telephony_platform_in
 /// Provides call control (answer, end, place), event streaming, and
 /// background delivery for apps registered as the default dialer.
 ///
-/// Access via [SimpleTelephony.instance].
-class SimpleTelephony {
-  SimpleTelephony._();
+/// Access via [SimpleTelephonyNative.instance].
+class SimpleTelephonyNative {
+  SimpleTelephonyNative._();
 
   /// The singleton instance used for all telephony operations.
-  static final SimpleTelephony instance = SimpleTelephony._();
+  static final SimpleTelephonyNative instance = SimpleTelephonyNative._();
 
-  static SimpleTelephonyPlatform get _platform =>
-      SimpleTelephonyPlatform.instance;
+  static SimpleTelephonyNativePlatform get _platform =>
+      SimpleTelephonyNativePlatform.instance;
 
   static StreamSubscription<void>? _foregroundSubscription;
 
@@ -66,7 +66,7 @@ class SimpleTelephony {
     required CallEventHandler onCallEvent,
   }) async {
     await disposeForegroundListener();
-    _foregroundSubscription = SimpleTelephony.instance.events.listen(
+    _foregroundSubscription = SimpleTelephonyNative.instance.events.listen(
       (PhoneCallEvent event) async {
         try {
           await onCallEvent(event);
@@ -75,7 +75,7 @@ class SimpleTelephony {
             FlutterErrorDetails(
               exception: error,
               stack: stackTrace,
-              library: 'simple_telephony',
+              library: 'simple_telephony_native',
               context: ErrorDescription(
                 'while handling a foreground phone call event',
               ),
@@ -122,8 +122,8 @@ Future<void> simpleTelephonyBackgroundDispatcher() async {
   WidgetsFlutterBinding.ensureInitialized();
   DartPluginRegistrant.ensureInitialized();
 
-  final MethodChannelSimpleTelephony platform =
-      SimpleTelephonyPlatform.instance as MethodChannelSimpleTelephony;
+  final MethodChannelSimpleTelephonyNative platform =
+      SimpleTelephonyNativePlatform.instance as MethodChannelSimpleTelephonyNative;
 
   final int? rawHandlerHandle =
       await platform.actionsChannel.invokeMethod<int>(
@@ -168,7 +168,7 @@ Future<void> simpleTelephonyBackgroundDispatcher() async {
         FlutterErrorDetails(
           exception: error,
           stack: stackTrace,
-          library: 'simple_telephony',
+          library: 'simple_telephony_native',
           context: ErrorDescription(
             'while handling a background phone call event',
           ),

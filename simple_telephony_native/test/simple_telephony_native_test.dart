@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:simple_telephony/simple_telephony.dart';
+import 'package:simple_telephony_native/simple_telephony_native.dart';
 
 const MethodChannel _actionsChannel =
     MethodChannel('io.simplezen.simple_telephony/telecom_actions');
@@ -69,7 +69,7 @@ void main() {
   });
 
   tearDown(() async {
-    await SimpleTelephony.disposeForegroundListener();
+    await SimpleTelephonyNative.disposeForegroundListener();
     messenger.setMockMethodCallHandler(_actionsChannel, null);
   });
 
@@ -80,7 +80,7 @@ void main() {
   test(
       'registerBackgroundHandler stores callback handles through native bridge',
       () async {
-    await SimpleTelephony.registerBackgroundHandler(_backgroundHandler);
+    await SimpleTelephonyNative.registerBackgroundHandler(_backgroundHandler);
 
     expect(recordedCalls, hasLength(1));
     expect(recordedCalls.single.method, 'registerBackgroundHandler');
@@ -96,7 +96,7 @@ void main() {
   // ---------------------------------------------------------------------------
 
   test('getCurrentCalls decodes persisted snapshots', () async {
-    final calls = await SimpleTelephony.instance.getCurrentCalls();
+    final calls = await SimpleTelephonyNative.instance.getCurrentCalls();
 
     expect(calls, hasLength(1));
     expect(calls.single.callId, 'call-1');
@@ -111,7 +111,7 @@ void main() {
       return null;
     });
 
-    final calls = await SimpleTelephony.instance.getCurrentCalls();
+    final calls = await SimpleTelephonyNative.instance.getCurrentCalls();
     expect(calls, isEmpty);
   });
 
@@ -120,14 +120,14 @@ void main() {
   // ---------------------------------------------------------------------------
 
   test('placePhoneCall decodes typed control results', () async {
-    final result = await SimpleTelephony.instance.placePhoneCall('+15551234567');
+    final result = await SimpleTelephonyNative.instance.placePhoneCall('+15551234567');
 
     expect(result.isSuccess, isTrue);
     expect(result.status, CallControlStatus.requested);
   });
 
   test('placePhoneCall passes phone number as argument', () async {
-    await SimpleTelephony.instance.placePhoneCall('+15559876543');
+    await SimpleTelephonyNative.instance.placePhoneCall('+15559876543');
 
     final placeCall =
         recordedCalls.firstWhere((c) => c.method == 'placePhoneCall');
@@ -140,7 +140,7 @@ void main() {
 
   test('answerPhoneCall returns success for live call', () async {
     final result =
-        await SimpleTelephony.instance.answerPhoneCall('call-live');
+        await SimpleTelephonyNative.instance.answerPhoneCall('call-live');
 
     expect(result.isSuccess, isTrue);
     expect(result.status, CallControlStatus.success);
@@ -162,7 +162,7 @@ void main() {
     });
 
     final result =
-        await SimpleTelephony.instance.answerPhoneCall('call-stale');
+        await SimpleTelephonyNative.instance.answerPhoneCall('call-stale');
 
     expect(result.isSuccess, isFalse);
     expect(result.status, CallControlStatus.notAttached);
@@ -182,7 +182,7 @@ void main() {
     });
 
     final result =
-        await SimpleTelephony.instance.answerPhoneCall('call-unknown');
+        await SimpleTelephonyNative.instance.answerPhoneCall('call-unknown');
 
     expect(result.isSuccess, isFalse);
     expect(result.status, CallControlStatus.notFound);
@@ -193,7 +193,7 @@ void main() {
   // ---------------------------------------------------------------------------
 
   test('endPhoneCall returns success for live call', () async {
-    final result = await SimpleTelephony.instance.endPhoneCall('call-live');
+    final result = await SimpleTelephonyNative.instance.endPhoneCall('call-live');
 
     expect(result.isSuccess, isTrue);
     expect(result.status, CallControlStatus.success);
@@ -214,7 +214,7 @@ void main() {
       return null;
     });
 
-    final result = await SimpleTelephony.instance.endPhoneCall('call-fail');
+    final result = await SimpleTelephonyNative.instance.endPhoneCall('call-fail');
 
     expect(result.isSuccess, isFalse);
     expect(result.status, CallControlStatus.platformFailure);
@@ -226,7 +226,7 @@ void main() {
   // ---------------------------------------------------------------------------
 
   test('isDefaultDialerApp returns true when native returns true', () async {
-    final isDefault = await SimpleTelephony.instance.isDefaultDialerApp();
+    final isDefault = await SimpleTelephonyNative.instance.isDefaultDialerApp();
     expect(isDefault, isTrue);
   });
 
@@ -237,7 +237,7 @@ void main() {
       return null;
     });
 
-    final isDefault = await SimpleTelephony.instance.isDefaultDialerApp();
+    final isDefault = await SimpleTelephonyNative.instance.isDefaultDialerApp();
     expect(isDefault, isFalse);
   });
 
@@ -248,12 +248,12 @@ void main() {
       return null;
     });
 
-    final isDefault = await SimpleTelephony.instance.isDefaultDialerApp();
+    final isDefault = await SimpleTelephonyNative.instance.isDefaultDialerApp();
     expect(isDefault, isFalse);
   });
 
   test('requestDefaultDialerApp returns granted state', () async {
-    final granted = await SimpleTelephony.instance.requestDefaultDialerApp();
+    final granted = await SimpleTelephonyNative.instance.requestDefaultDialerApp();
     expect(granted, isTrue);
   });
 
@@ -264,7 +264,7 @@ void main() {
       return null;
     });
 
-    final granted = await SimpleTelephony.instance.requestDefaultDialerApp();
+    final granted = await SimpleTelephonyNative.instance.requestDefaultDialerApp();
     expect(granted, isFalse);
   });
 
@@ -285,7 +285,7 @@ void main() {
     });
 
     expect(
-      () => SimpleTelephony.instance.answerPhoneCall(''),
+      () => SimpleTelephonyNative.instance.answerPhoneCall(''),
       throwsA(isA<PlatformException>()),
     );
   });
@@ -299,7 +299,7 @@ void main() {
       return null;
     });
 
-    final result = await SimpleTelephony.instance.endPhoneCall('call-1');
+    final result = await SimpleTelephonyNative.instance.endPhoneCall('call-1');
     expect(result.status, CallControlStatus.platformFailure);
   });
 
@@ -315,7 +315,7 @@ void main() {
 
     final Completer<PhoneCallEvent> completer = Completer<PhoneCallEvent>();
     final subscription =
-        SimpleTelephony.instance.events.listen(completer.complete);
+        SimpleTelephonyNative.instance.events.listen(completer.complete);
 
     final ByteData envelope = encodeSuccessEnvelope(
       <String, Object?>{
@@ -355,12 +355,12 @@ void main() {
     final List<String> firstListenerCalls = <String>[];
     final List<String> secondListenerCalls = <String>[];
 
-    await SimpleTelephony.initializeForeground(
+    await SimpleTelephonyNative.initializeForeground(
       onCallEvent: (PhoneCallEvent event) async {
         firstListenerCalls.add(event.callId);
       },
     );
-    await SimpleTelephony.initializeForeground(
+    await SimpleTelephonyNative.initializeForeground(
       onCallEvent: (PhoneCallEvent event) async {
         secondListenerCalls.add(event.callId);
       },
@@ -390,13 +390,13 @@ void main() {
     );
 
     final List<String> observedCallIds = <String>[];
-    await SimpleTelephony.initializeForeground(
+    await SimpleTelephonyNative.initializeForeground(
       onCallEvent: (PhoneCallEvent event) async {
         observedCallIds.add(event.callId);
       },
     );
 
-    await SimpleTelephony.disposeForegroundListener();
+    await SimpleTelephonyNative.disposeForegroundListener();
     await emitForegroundEvent(<String, Object?>{
       'eventId': 'evt-3',
       'callId': 'call-after-dispose',
@@ -430,7 +430,7 @@ void main() {
     });
 
     var shouldThrow = true;
-    await SimpleTelephony.initializeForeground(
+    await SimpleTelephonyNative.initializeForeground(
       onCallEvent: (PhoneCallEvent event) async {
         observedCallIds.add(event.callId);
         if (shouldThrow) {

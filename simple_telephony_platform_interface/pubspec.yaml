@@ -1,6 +1,6 @@
 name: simple_telephony_platform_interface
 description: >-
-  A common platform interface for the simple_telephony plugin.
+  A common platform interface for the simple_telephony_native plugin.
 version: 0.1.0
 homepage: https://www.simplezen.io/development
 
