@@ -4,4 +4,4 @@
 
 -keep class io.flutter.view.FlutterCallbackInformation { *; }
 -keep class io.flutter.embedding.engine.dart.DartExecutor$DartCallback { *; }
--keep class io.simplezen.simple_telecom.** { *; }
+-keep class io.simplezen.simple_telephony.** { *; }

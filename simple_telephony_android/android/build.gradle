@@ -1,4 +1,4 @@
-group 'io.simplezen.simple_telecom'
+group 'io.simplezen.simple_telephony'
 version '1.0-SNAPSHOT'
 
 buildscript {
@@ -24,7 +24,7 @@ apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 
 android {
-    namespace 'io.simplezen.simple_telecom'
+    namespace 'io.simplezen.simple_telephony'
     compileSdkVersion 35
     defaultConfig {
         minSdkVersion 30

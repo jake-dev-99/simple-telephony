@@ -1,10 +1,10 @@
-package io.simplezen.simple_telecom
+package io.simplezen.simple_telephony
 
 import android.telecom.Call
 import android.telecom.InCallService
 import android.util.Log
 
-internal class SimpleTelecomInCallService : InCallService() {
+internal class SimpleTelephonyInCallService : InCallService() {
     private val callCallback = object : Call.Callback() {
         override fun onStateChanged(call: Call, state: Int) {
             super.onStateChanged(call, state)
@@ -38,6 +38,6 @@ internal class SimpleTelecomInCallService : InCallService() {
     }
 
     companion object {
-        private const val TAG = "SimpleTelecomInCallService"
+        private const val TAG = "SimpleTelephonyInCallService"
     }
 }

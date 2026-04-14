@@ -1,7 +1,7 @@
 name: simple_telephony_android
 description: >-
   Android implementation of the simple_telephony_native plugin.
-version: 0.2.0
+version: 0.2.1
 homepage: https://www.simplezen.io/development
 
 environment:
@@ -28,6 +28,6 @@ flutter:
     implements: simple_telephony_native
     platforms:
       android:
-        package: io.simplezen.simple_telecom
-        pluginClass: SimpleTelecomPlugin
+        package: io.simplezen.simple_telephony
+        pluginClass: SimpleTelephonyPlugin
         dartPluginClass: SimpleTelephonyAndroid
