@@ -1,0 +1,20 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="io.simplezen.simple_telecom">
+
+    <uses-permission android:name="android.permission.BIND_INCALL_SERVICE" />
+
+    <application>
+        <service
+            android:name="io.simplezen.simple_telecom.SimpleTelecomInCallService"
+            android:enabled="true"
+            android:exported="true"
+            android:permission="android.permission.BIND_INCALL_SERVICE">
+            <meta-data
+                android:name="android.telecom.IN_CALL_SERVICE_UI"
+                android:value="true" />
+            <intent-filter>
+                <action android:name="android.telecom.InCallService" />
+            </intent-filter>
+        </service>
+    </application>
+</manifest>
