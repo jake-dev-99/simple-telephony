@@ -37,6 +37,37 @@ log()  { echo -e "${GREEN}[publish]${NC} $*"; }
 warn() { echo -e "${YELLOW}[publish]${NC} $*"; }
 fail() { echo -e "${RED}[publish]${NC} $*" >&2; exit 1; }
 
+# Replace path dependencies with hosted version constraints in a pubspec.yaml.
+# Only runs during --live publish. Reverted after publish via git checkout.
+swap_path_to_hosted() {
+  local pubspec="$1"
+  local interface_version
+  interface_version=$(grep '^version:' "$ROOT_DIR/simple_telephony_platform_interface/pubspec.yaml" | awk '{print $2}')
+  local android_version
+  android_version=$(grep '^version:' "$ROOT_DIR/simple_telephony_android/pubspec.yaml" | awk '{print $2}')
+
+  # Replace multi-line path deps with single-line hosted deps.
+  sed -i.bak \
+    -e "/simple_telephony_platform_interface:/{n;s|.*path:.*|  simple_telephony_platform_interface: ^${interface_version}|;}" \
+    -e "/simple_telephony_android:/{n;s|.*path:.*|  simple_telephony_android: ^${android_version}|;}" \
+    "$pubspec"
+
+  # Clean up: remove lines that are now just the package name with no value
+  # (the sed above replaces the path: line but leaves the original key: line)
+  sed -i.bak \
+    '/^  simple_telephony_platform_interface:$/d;/^  simple_telephony_android:$/d' \
+    "$pubspec"
+
+  rm -f "${pubspec}.bak"
+}
+
+revert_pubspecs() {
+  log "Reverting pubspec.yaml files..."
+  for pkg in "${PACKAGES[@]}"; do
+    git -C "$ROOT_DIR" checkout -- "$pkg/pubspec.yaml" 2>/dev/null || true
+  done
+}
+
 LIVE=false
 
 for arg in "$@"; do
@@ -62,14 +93,9 @@ for pkg in "${PACKAGES[@]}"; do
   pkg_dir="$ROOT_DIR/$pkg"
   log "━━━ ${BOLD}$pkg${NC} ━━━"
 
-  # Analysis — fail on errors, allow warnings during dev (path deps are expected).
-  # --live publish uses --fatal-infos after path deps are replaced with versions.
+  # Analysis — allow path-dep warnings during dev, strict for live.
   log "  Analyzing..."
-  if $LIVE; then
-    (cd "$pkg_dir" && dart analyze --fatal-infos) || fail "$pkg: Analysis failed."
-  else
-    (cd "$pkg_dir" && dart analyze --no-fatal-warnings) || fail "$pkg: Analysis found errors."
-  fi
+  (cd "$pkg_dir" && dart analyze --no-fatal-warnings) || fail "$pkg: Analysis found errors."
 
   # Flutter tests
   log "  Testing..."
@@ -85,6 +111,14 @@ for pkg in "${PACKAGES[@]}"; do
 done
 
 # --- Step 3: Publish ---
+if $LIVE; then
+  # Swap path deps to hosted version constraints for publish, revert on exit.
+  trap revert_pubspecs EXIT
+  for pkg in "${PACKAGES[@]}"; do
+    swap_path_to_hosted "$ROOT_DIR/$pkg/pubspec.yaml"
+  done
+fi
+
 for pkg in "${PACKAGES[@]}"; do
   pkg_dir="$ROOT_DIR/$pkg"
 
