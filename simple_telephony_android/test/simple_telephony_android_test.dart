@@ -6,7 +6,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   test('registerWith sets platform instance to SimpleTelephonyAndroid', () {
-    SimpleTelephonyAndroid.registerWith(null);
+    SimpleTelephonyAndroid.registerWith();
     expect(SimpleTelephonyPlatform.instance, isA<SimpleTelephonyAndroid>());
   });
 

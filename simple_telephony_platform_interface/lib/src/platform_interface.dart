@@ -1,9 +1,13 @@
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 import 'call_control_result.dart';
+import 'call_log_entry.dart';
+import 'call_log_filter.dart';
+import 'device_info.dart';
 import 'method_channel_simple_telephony.dart';
 import 'phone_call_event.dart';
 import 'phone_call_snapshot.dart';
+import 'sim_card.dart';
 
 /// Callback signature for receiving phone call events.
 typedef CallEventHandler = Future<void> Function(PhoneCallEvent event);
@@ -62,4 +66,36 @@ abstract class SimpleTelephonyPlatform extends PlatformInterface {
     required int dispatcherHandle,
     required int userHandle,
   });
+
+  /// Lists call-log entries (history) matching [filter], ordered by [sort],
+  /// paged by [limit] / [offset].
+  ///
+  /// Requires `READ_CALL_LOG` permission. Implemented against the device's
+  /// `content://call_log/calls` provider — the typed filter is translated to
+  /// the underlying query inside the platform implementation.
+  Future<List<CallLogEntry>> listCallLog({
+    CallLogFilter? filter,
+    CallLogSort? sort,
+    int? limit,
+    int? offset,
+  }) {
+    throw UnimplementedError('listCallLog() has not been implemented.');
+  }
+
+  /// Returns basic device info (build, Android version, SIM slot count).
+  ///
+  /// This is NOT a content-provider query — it's sourced from `Build` and
+  /// `SubscriptionManager`. The `deviceId` field requires `READ_PHONE_STATE`
+  /// on supported Android versions.
+  Future<DeviceInfo> getDeviceInfo() {
+    throw UnimplementedError('getDeviceInfo() has not been implemented.');
+  }
+
+  /// Enumerates active SIM subscriptions on the device.
+  ///
+  /// Sourced from `SubscriptionManager.getActiveSubscriptionInfoList()` (NOT
+  /// a content-provider query). Requires `READ_PHONE_STATE`.
+  Future<List<SimCard>> listSimCards() {
+    throw UnimplementedError('listSimCards() has not been implemented.');
+  }
 }

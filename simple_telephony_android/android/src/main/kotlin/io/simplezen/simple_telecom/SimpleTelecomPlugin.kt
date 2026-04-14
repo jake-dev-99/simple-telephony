@@ -11,8 +11,10 @@ class SimpleTelecomPlugin : FlutterPlugin, ActivityAware {
     private lateinit var applicationContext: Context
 
     private var actionsChannel: MethodChannel? = null
+    private var deviceInfoChannel: MethodChannel? = null
     private var callManager: CallManager? = null
     private var methodHandler: TelecomMethodHandler? = null
+    private var deviceInfoHandler: DeviceInfoHandler? = null
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         applicationContext = binding.applicationContext
@@ -21,6 +23,7 @@ class SimpleTelecomPlugin : FlutterPlugin, ActivityAware {
 
         callManager = CallManager(applicationContext)
         methodHandler = TelecomMethodHandler(callManager!!)
+        deviceInfoHandler = DeviceInfoHandler(applicationContext)
 
         actionsChannel = MethodChannel(
             binding.binaryMessenger,
@@ -28,12 +31,22 @@ class SimpleTelecomPlugin : FlutterPlugin, ActivityAware {
         ).also { channel ->
             channel.setMethodCallHandler(methodHandler)
         }
+
+        deviceInfoChannel = MethodChannel(
+            binding.binaryMessenger,
+            TelecomConstants.DEVICE_INFO_CHANNEL,
+        ).also { channel ->
+            channel.setMethodCallHandler(deviceInfoHandler)
+        }
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         actionsChannel?.setMethodCallHandler(null)
         actionsChannel = null
+        deviceInfoChannel?.setMethodCallHandler(null)
+        deviceInfoChannel = null
         methodHandler = null
+        deviceInfoHandler = null
         callManager = null
         TelecomServiceRuntime.foregroundBridge().detach()
     }

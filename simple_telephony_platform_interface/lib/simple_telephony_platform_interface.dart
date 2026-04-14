@@ -1,6 +1,11 @@
 export 'src/call_control_result.dart';
+export 'src/call_log_entry.dart';
+export 'src/call_log_filter.dart';
+export 'src/device_info.dart';
 export 'src/method_channel_simple_telephony.dart';
 export 'src/phone_call_base.dart';
 export 'src/phone_call_event.dart';
 export 'src/phone_call_snapshot.dart';
 export 'src/platform_interface.dart';
+export 'src/sim_card.dart';
+export 'src/sort_direction.dart';
