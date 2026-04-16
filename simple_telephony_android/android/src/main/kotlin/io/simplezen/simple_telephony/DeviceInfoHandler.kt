@@ -1,4 +1,4 @@
-package io.simplezen.simple_telecom
+package io.simplezen.simple_telephony
 
 import android.Manifest
 import android.annotation.SuppressLint

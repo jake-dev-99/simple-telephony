@@ -1,4 +1,4 @@
-package io.simplezen.simple_telecom
+package io.simplezen.simple_telephony
 
 import android.content.Context
 import android.telecom.Call
@@ -217,6 +217,18 @@ object TelecomServiceRuntime {
         if (shouldFlushBackground) {
             backgroundBridge.ensureStarted()
             backgroundBridge.flushPendingEvents()
+        }
+
+        // Notify the host-side UI launcher, if one is registered. This is the
+        // seam used by default-dialer apps to pop a full-screen Activity for
+        // incoming calls (see [CallUiLauncher] docs). Runs after the Dart
+        // bridges so that a host-side exception can't starve the event stream.
+        SimpleTelephonyCallUi.launcher?.let { launcher ->
+            try {
+                launcher.onCallEvent(appContext, payload)
+            } catch (throwable: Throwable) {
+                Log.e(TAG, "CallUiLauncher threw; continuing", throwable)
+            }
         }
 
         return payload

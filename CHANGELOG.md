@@ -1,3 +1,25 @@
+## 0.2.1
+
+### Internal
+- Rename internal Kotlin package from `io.simplezen.simple_telecom` to
+  `io.simplezen.simple_telephony` so it matches the Dart package name,
+  MethodChannel prefix, and the `SimpleTelephonyNative` facade class. No
+  Dart API changes; call-sites that only use the facade are unaffected.
+- Rename `SimpleTelecomPlugin` → `SimpleTelephonyPlugin` and
+  `SimpleTelecomInCallService` → `SimpleTelephonyInCallService` in the
+  Android implementation. Host apps that suppress the plugin's
+  `InCallService` via `tools:node="remove"` must update their target FQN
+  to `io.simplezen.simple_telephony.SimpleTelephonyInCallService`.
+- Plugin `AndroidManifest.xml` + `build.gradle` (group/namespace) +
+  `consumer-rules.pro` ProGuard rules + `pubspec.yaml`
+  (`flutter.plugin.platforms.android.{package,pluginClass}`) updated
+  accordingly.
+
+### Removed
+- Deleted the stale pre-federation top-level `/android/` source tree from
+  the simple-telephony repository root. All Android code lives under
+  `simple_telephony_android/` in the federated layout.
+
 ## 0.2.0
 
 ### Added

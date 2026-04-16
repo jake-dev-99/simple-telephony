@@ -1,3 +1,24 @@
+## 0.3.0
+
+- Federation version bump. No public API change. The
+  `simple_telephony_android` implementation gains a native-only
+  `CallUiLauncher` seam (Kotlin interface + registry object), which
+  does not cross the platform interface.
+
+## 0.2.1
+
+- Federation version bump for the Kotlin package rename in
+  `simple_telephony_android`. No public API change.
+
+## 0.2.0
+
+- NEW: `CallLogEntry` plus `CallLogFilter` and `CallLogSort` query
+  types; `PlatformInterface.listCallLog(...)` contract.
+- NEW: `DeviceInfo` model; `PlatformInterface.getDeviceInfo()`.
+- NEW: `SimCard` model; `PlatformInterface.listSimCards()`.
+- All existing `PhoneCall*` types (event, snapshot, base, state) and
+  `CallControlResult` / `CallControlStatus` remain unchanged from 0.1.
+
 ## 0.1.0
 
 - Initial release
