@@ -1,3 +1,36 @@
+## 0.3.0
+
+- NEW: `CallUiLauncher` interface + `SimpleTelephonyCallUi.launcher`
+  registry. Host apps register a launcher (typically in
+  `Application.onCreate`) to receive every call state event on the
+  InCallService binder thread. Intended use is launching an
+  incoming-call Activity that hosts its own Flutter engine without
+  routing the launch decision through Dart (which would add cold-start
+  latency when the app process is dead). The hook is purely additive
+  and opt-in — plugin consumers that only need Dart-level events do
+  not need to register a launcher. See `CallUiLauncher` KDoc for the
+  payload schema and threading contract.
+
+## 0.2.1
+
+- REFACTOR: renamed internal Kotlin package from
+  `io.simplezen.simple_telecom` to `io.simplezen.simple_telephony` for
+  consistency with the federated plugin name. No Dart API change. Host
+  apps that reference the plugin's InCallService by fully-qualified
+  name in their merged Android manifest (for instance, overriding it
+  via `<service tools:node="remove">`) must update the class name to
+  `io.simplezen.simple_telephony.SimpleTelephonyInCallService`.
+
+## 0.2.0
+
+- NEW: `listCallLog(filter, sort)` returning typed `CallLogEntry`
+  records.
+- NEW: `getDeviceInfo()` returning model, manufacturer, and Android
+  version.
+- NEW: `listSimCards()` enumerating active SIM cards.
+- RENAME: facade class exposed to Dart is `SimpleTelephonyNative`
+  (previously `SimpleTelecom`), matching the federated package name.
+
 ## 0.1.0
 
 - Initial release
