@@ -1,0 +1,26 @@
+name: simple_telephony_native_example
+description: >-
+  Minimal Flutter example that demonstrates registering as a default
+  dialer, subscribing to call events, listing call log + SIM cards, and
+  resolving device info via simple_telephony_native.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.6.0
+  flutter: '>=3.24.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  simple_telephony_native:
+    path: ../
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
