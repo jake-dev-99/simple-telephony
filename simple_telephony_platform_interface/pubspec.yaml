@@ -3,6 +3,14 @@ description: >-
   A common platform interface for the simple_telephony_native plugin.
 version: 0.3.0
 homepage: https://www.simplezen.io/development
+repository: https://github.com/simplezen/simple-telephony
+issue_tracker: https://github.com/simplezen/simple-telephony/issues
+
+topics:
+  - telephony
+  - phone
+  - android
+  - calling
 
 environment:
   sdk: ">=3.6.0 <4.0.0"

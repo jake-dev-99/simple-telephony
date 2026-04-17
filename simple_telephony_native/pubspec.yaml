@@ -5,6 +5,8 @@ description: >-
   event streaming and background delivery with at-least-once guarantees.
 version: 0.3.0
 homepage: https://www.simplezen.io/development
+repository: https://github.com/simplezen/simple-telephony
+issue_tracker: https://github.com/simplezen/simple-telephony/issues
 
 topics:
   - telephony
