@@ -119,8 +119,7 @@ class SimpleTelephonyAndroid extends MethodChannelSimpleTelephony {
   CallLogEntry _callLogEntryFromRaw(Map<String, Object?> raw) {
     int? asInt(Object? v) =>
         v is int ? v : (v is String ? int.tryParse(v) : null);
-    bool asBool(Object? v) =>
-        v == 1 || v == true || v == '1' || v == 'true';
+    bool asBool(Object? v) => v == 1 || v == true || v == '1' || v == 'true';
 
     return CallLogEntry(
       id: asInt(raw['_id'] ?? raw['id']) ?? 0,

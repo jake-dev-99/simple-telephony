@@ -116,7 +116,8 @@ void main() {
   // ---------------------------------------------------------------------------
 
   test('placePhoneCall decodes typed control results', () async {
-    final result = await SimpleTelephonyNative.instance.placePhoneCall('+15551234567');
+    final result =
+        await SimpleTelephonyNative.instance.placePhoneCall('+15551234567');
 
     expect(result.isSuccess, isTrue);
     expect(result.status, CallControlStatus.requested);
@@ -189,12 +190,12 @@ void main() {
   // ---------------------------------------------------------------------------
 
   test('endPhoneCall returns success for live call', () async {
-    final result = await SimpleTelephonyNative.instance.endPhoneCall('call-live');
+    final result =
+        await SimpleTelephonyNative.instance.endPhoneCall('call-live');
 
     expect(result.isSuccess, isTrue);
     expect(result.status, CallControlStatus.success);
-    final endCall =
-        recordedCalls.firstWhere((c) => c.method == 'endPhoneCall');
+    final endCall = recordedCalls.firstWhere((c) => c.method == 'endPhoneCall');
     expect(endCall.arguments, 'call-live');
   });
 
@@ -210,7 +211,8 @@ void main() {
       return null;
     });
 
-    final result = await SimpleTelephonyNative.instance.endPhoneCall('call-fail');
+    final result =
+        await SimpleTelephonyNative.instance.endPhoneCall('call-fail');
 
     expect(result.isSuccess, isFalse);
     expect(result.status, CallControlStatus.platformFailure);

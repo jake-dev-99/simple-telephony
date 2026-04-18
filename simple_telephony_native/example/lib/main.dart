@@ -89,8 +89,8 @@ class _HomePageState extends State<_HomePage> {
   }
 
   Future<void> _refreshAll() async {
-    final dialerGrant = await SimplePermissionsNative.instance
-        .check(const DefaultDialerApp());
+    final dialerGrant =
+        await SimplePermissionsNative.instance.check(const DefaultDialerApp());
     final isDefault = dialerGrant == PermissionGrant.granted;
     DeviceInfo? device;
     var sims = const <SimCard>[];
@@ -157,12 +157,14 @@ class _HomePageState extends State<_HomePage> {
                 Text('slot ${sim.slotIndex}: ${sim.carrierName ?? "?"} '
                     '(${sim.countryIso ?? "?"})'),
             ]),
-            _section('Call log (latest ${_callLog.take(5).length} of '
-                '${_callLog.length})', [
-              for (final entry in _callLog.take(5))
-                Text('${entry.type.name}: ${entry.number} '
-                    '@ ${entry.date} (${entry.duration.inSeconds}s)'),
-            ]),
+            _section(
+                'Call log (latest ${_callLog.take(5).length} of '
+                '${_callLog.length})',
+                [
+                  for (final entry in _callLog.take(5))
+                    Text('${entry.type.name}: ${entry.number} '
+                        '@ ${entry.date} (${entry.duration.inSeconds}s)'),
+                ]),
           ],
         ),
       ),

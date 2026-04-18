@@ -17,8 +17,7 @@ const String backgroundEventsChannelName =
 /// platform channels.
 class MethodChannelSimpleTelephony extends SimpleTelephonyPlatform {
   /// The method channel for call control and registration.
-  final MethodChannel actionsChannel =
-      const MethodChannel(actionsChannelName);
+  final MethodChannel actionsChannel = const MethodChannel(actionsChannelName);
 
   /// The event channel for foreground call events.
   final EventChannel foregroundEventsChannel =
@@ -31,10 +30,8 @@ class MethodChannelSimpleTelephony extends SimpleTelephonyPlatform {
   Stream<PhoneCallEvent>? _events;
 
   @override
-  Stream<PhoneCallEvent> get events =>
-      _events ??= foregroundEventsChannel
-          .receiveBroadcastStream()
-          .map((dynamic event) {
+  Stream<PhoneCallEvent> get events => _events ??=
+          foregroundEventsChannel.receiveBroadcastStream().map((dynamic event) {
         return PhoneCallEvent.fromRaw(Map<String, dynamic>.from(event as Map));
       }).asBroadcastStream();
 
