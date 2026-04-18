@@ -141,8 +141,8 @@ void main() {
           PhoneCallStateX.fromPlatformValue('active'), PhoneCallState.active);
       expect(
           PhoneCallStateX.fromPlatformValue('holding'), PhoneCallState.holding);
-      expect(PhoneCallStateX.fromPlatformValue('on_hold'),
-          PhoneCallState.holding);
+      expect(
+          PhoneCallStateX.fromPlatformValue('on_hold'), PhoneCallState.holding);
       expect(PhoneCallStateX.fromPlatformValue('disconnecting'),
           PhoneCallState.disconnecting);
       expect(PhoneCallStateX.fromPlatformValue('disconnected'),
@@ -150,16 +150,16 @@ void main() {
     });
 
     test('unknown states map to unknown', () {
-      expect(PhoneCallStateX.fromPlatformValue('bogus'),
-          PhoneCallState.unknown);
+      expect(
+          PhoneCallStateX.fromPlatformValue('bogus'), PhoneCallState.unknown);
       expect(PhoneCallStateX.fromPlatformValue(''), PhoneCallState.unknown);
     });
 
     test('mapping is case-insensitive', () {
       expect(
           PhoneCallStateX.fromPlatformValue('ACTIVE'), PhoneCallState.active);
-      expect(PhoneCallStateX.fromPlatformValue('Ringing'),
-          PhoneCallState.ringing);
+      expect(
+          PhoneCallStateX.fromPlatformValue('Ringing'), PhoneCallState.ringing);
     });
   });
 
@@ -169,14 +169,12 @@ void main() {
 
   group('PhoneCallDirection', () {
     test('incoming event returns incoming direction', () {
-      final event = PhoneCallEvent(
-          callId: 'c', state: 's', isIncoming: true);
+      final event = PhoneCallEvent(callId: 'c', state: 's', isIncoming: true);
       expect(event.direction, PhoneCallDirection.incoming);
     });
 
     test('outgoing event returns outgoing direction', () {
-      final event = PhoneCallEvent(
-          callId: 'c', state: 's', isIncoming: false);
+      final event = PhoneCallEvent(callId: 'c', state: 's', isIncoming: false);
       expect(event.direction, PhoneCallDirection.outgoing);
     });
   });
@@ -349,7 +347,8 @@ void main() {
           continue;
         }
         final r = CallControlResult(status: status);
-        expect(r.isSuccess, isFalse, reason: '${status.name} should not be success');
+        expect(r.isSuccess, isFalse,
+            reason: '${status.name} should not be success');
       }
     });
 
@@ -367,10 +366,10 @@ void main() {
     });
 
     test('equality compares status and message', () {
-      const a = CallControlResult(
-          status: CallControlStatus.success, message: 'ok');
-      const b = CallControlResult(
-          status: CallControlStatus.success, message: 'ok');
+      const a =
+          CallControlResult(status: CallControlStatus.success, message: 'ok');
+      const b =
+          CallControlResult(status: CallControlStatus.success, message: 'ok');
       const c = CallControlResult(
           status: CallControlStatus.success, message: 'different');
 
