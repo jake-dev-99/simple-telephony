@@ -37,13 +37,25 @@ SimpleTelephonyNative                ← Dart facade your app talks to
 
 ### 1. Become the default dialer
 
-```dart
-final granted = await SimpleTelephonyNative.instance.requestDefaultDialerApp();
-```
+Dialer-role observation + request lives in [`simple_permissions_native`](https://pub.dev/packages/simple_permissions_native) — role handling is not this plugin's concern.
 
-The system will show a role-request dialog. Until your app holds the default
-dialer role, `InCallService` callbacks will not fire and call control methods
-will return `permissionDenied`.
+```dart
+import 'package:simple_permissions_native/simple_permissions_native.dart';
+
+// One-off request.
+final granted =
+    await SimplePermissionsNative.instance.request(const DefaultDialerApp());
+
+// Reactive observation — refreshes on app resume and after each request.
+final observer =
+    SimplePermissionsNative.instance.observe(const [DefaultDialerApp()]);
+observer.stream.listen((result) {
+  final held = result.permissions[const DefaultDialerApp()] ==
+      PermissionGrant.granted;
+  // Gate UI on `held` — call control methods return `permissionDenied`
+  // until the role is held and `InCallService` callbacks won't fire.
+});
+```
 
 ### 2. Register a background handler
 

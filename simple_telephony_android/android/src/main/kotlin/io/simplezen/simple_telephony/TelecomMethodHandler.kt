@@ -7,8 +7,6 @@ internal class TelecomMethodHandler(
     private val callManager: CallManager,
 ) : MethodChannel.MethodCallHandler {
 
-    private var pendingDialerRequest: MethodChannel.Result? = null
-
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
             "placePhoneCall" -> {
@@ -38,25 +36,11 @@ internal class TelecomMethodHandler(
                 result.success(callManager.endCall(callId).toMap())
             }
 
-            "isDefaultDialerApp" -> {
-                result.success(callManager.isDefaultDialerApp())
-            }
-
-            "requestDefaultDialerApp" -> {
-                synchronized(this) {
-                    if (pendingDialerRequest != null) {
-                        result.error("request-in-flight", "A dialer role request is already running", null)
-                        return
-                    }
-                    pendingDialerRequest = result
-                }
-                callManager.requestDefaultDialerApp { granted ->
-                    synchronized(this) {
-                        pendingDialerRequest?.success(granted)
-                        pendingDialerRequest = null
-                    }
-                }
-            }
+            // `isDefaultDialerApp` / `requestDefaultDialerApp` moved
+            // to simple_permissions_native. Consumers call
+            // `SimplePermissionsNative.instance.check(DefaultDialerApp())`
+            // or `request(DefaultDialerApp())`; observe reactively via
+            // `observe([DefaultDialerApp()])`.
 
             "registerBackgroundHandler" -> {
                 val arguments = call.arguments as? Map<*, *>

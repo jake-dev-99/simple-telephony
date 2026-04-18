@@ -3,8 +3,9 @@
 /// Demonstrates the plugin's public API surface:
 ///   * `initializeForeground` + event-stream subscription for live call
 ///     state updates,
-///   * `isDefaultDialerApp` / `requestDefaultDialerApp` for the
-///     default-dialer role dance,
+///   * the default-dialer role dance — observed + requested via
+///     `simple_permissions_native` (role state is not this plugin's
+///     concern),
 ///   * `getDeviceInfo`, `listSimCards`, `listCallLog` for read-only
 ///     telephony data.
 ///
@@ -15,10 +16,12 @@ library;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:simple_permissions_native/simple_permissions_native.dart';
 import 'package:simple_telephony_native/simple_telephony_native.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await SimplePermissionsNative.initialize();
   await TelephonyBootstrap.initialize();
   runApp(const _App());
 }
@@ -86,7 +89,9 @@ class _HomePageState extends State<_HomePage> {
   }
 
   Future<void> _refreshAll() async {
-    final isDefault = await SimpleTelephonyNative.instance.isDefaultDialerApp();
+    final dialerGrant = await SimplePermissionsNative.instance
+        .check(const DefaultDialerApp());
+    final isDefault = dialerGrant == PermissionGrant.granted;
     DeviceInfo? device;
     var sims = const <SimCard>[];
     var callLog = const <CallLogEntry>[];
@@ -110,7 +115,7 @@ class _HomePageState extends State<_HomePage> {
   }
 
   Future<void> _requestDialerRole() async {
-    await SimpleTelephonyNative.instance.requestDefaultDialerApp();
+    await SimplePermissionsNative.instance.request(const DefaultDialerApp());
     await _refreshAll();
   }
 

@@ -66,15 +66,6 @@ class MethodChannelSimpleTelephony extends SimpleTelephonyPlatform {
       _invokeControl('endPhoneCall', callId);
 
   @override
-  Future<bool> isDefaultDialerApp() async =>
-      (await actionsChannel.invokeMethod<bool>('isDefaultDialerApp')) == true;
-
-  @override
-  Future<bool> requestDefaultDialerApp() async =>
-      (await actionsChannel.invokeMethod<bool>('requestDefaultDialerApp')) ==
-      true;
-
-  @override
   Future<void> registerBackgroundHandler({
     required int dispatcherHandle,
     required int userHandle,

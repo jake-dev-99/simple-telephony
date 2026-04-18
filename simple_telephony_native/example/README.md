@@ -3,7 +3,7 @@
 Minimal Flutter app demonstrating every part of `simple_telephony_native`'s
 public API on Android:
 
-- **Default-dialer role**: `isDefaultDialerApp()` / `requestDefaultDialerApp()`
+- **Default-dialer role**: observed + requested via `simple_permissions_native`'s `DefaultDialerApp` permission (role state moved out of this plugin in v0.4.0)
 - **Live call events**: `initializeForeground(onCallEvent:)` + the
   `SimpleTelephonyNative.instance.events` broadcast stream
 - **Device info**: `getDeviceInfo()` — manufacturer, model, Android version

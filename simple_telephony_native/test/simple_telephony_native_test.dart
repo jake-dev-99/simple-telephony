@@ -58,10 +58,6 @@ void main() {
           return <String, Object?>{'status': 'success'};
         case 'endPhoneCall':
           return <String, Object?>{'status': 'success'};
-        case 'isDefaultDialerApp':
-          return true;
-        case 'requestDefaultDialerApp':
-          return true;
         default:
           return null;
       }
@@ -221,52 +217,8 @@ void main() {
     expect(result.message, isNotNull);
   });
 
-  // ---------------------------------------------------------------------------
-  // Default dialer role
-  // ---------------------------------------------------------------------------
-
-  test('isDefaultDialerApp returns true when native returns true', () async {
-    final isDefault = await SimpleTelephonyNative.instance.isDefaultDialerApp();
-    expect(isDefault, isTrue);
-  });
-
-  test('isDefaultDialerApp returns false when native returns false', () async {
-    messenger.setMockMethodCallHandler(_actionsChannel,
-        (MethodCall call) async {
-      if (call.method == 'isDefaultDialerApp') return false;
-      return null;
-    });
-
-    final isDefault = await SimpleTelephonyNative.instance.isDefaultDialerApp();
-    expect(isDefault, isFalse);
-  });
-
-  test('isDefaultDialerApp returns false when native returns null', () async {
-    messenger.setMockMethodCallHandler(_actionsChannel,
-        (MethodCall call) async {
-      if (call.method == 'isDefaultDialerApp') return null;
-      return null;
-    });
-
-    final isDefault = await SimpleTelephonyNative.instance.isDefaultDialerApp();
-    expect(isDefault, isFalse);
-  });
-
-  test('requestDefaultDialerApp returns granted state', () async {
-    final granted = await SimpleTelephonyNative.instance.requestDefaultDialerApp();
-    expect(granted, isTrue);
-  });
-
-  test('requestDefaultDialerApp returns false when denied', () async {
-    messenger.setMockMethodCallHandler(_actionsChannel,
-        (MethodCall call) async {
-      if (call.method == 'requestDefaultDialerApp') return false;
-      return null;
-    });
-
-    final granted = await SimpleTelephonyNative.instance.requestDefaultDialerApp();
-    expect(granted, isFalse);
-  });
+  // Default-dialer role tests live in simple_permissions_native's
+  // suite; the role API moved out of this plugin in v0.4.0.
 
   // ---------------------------------------------------------------------------
   // Native error envelopes

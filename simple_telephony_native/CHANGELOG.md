@@ -1,3 +1,11 @@
+## 0.4.0
+
+### Breaking
+- Removed `SimpleTelephonyNative.instance.isDefaultDialerApp()` and `requestDefaultDialerApp()`. Dialer-role observation + request lives in `simple_permissions_native` now — call `SimplePermissionsNative.instance.check(DefaultDialerApp())` / `request(DefaultDialerApp())`, or `observe([DefaultDialerApp()])` for reactive updates. This makes `simple_permissions_native` the single source of truth for access-state vocabulary (runtime permissions + app-role handlers) across the plugin family.
+
+### Internal
+- `CallManager` + `TelecomMethodHandler` drop the `RoleManager` plumbing (method-channel handlers, activity-result listener, pending-request queue). Native surface shrinks to actual telephony operations.
+
 ## 0.3.0
 
 - `simple_telephony_android` now exposes a native-side `CallUiLauncher`
