@@ -11,7 +11,8 @@ feature branch
   staging
      │  PR  ▼  (CI runs)
     main
-     │  tag push ▼  (CD publishes to pub.dev)
+     │  push to main ▼  (auto-tag bumps versions + tags commit)
+     │  tag push ▼      (publish.yml runs OIDC pub.dev release)
     pub.dev
 ```
 
@@ -32,18 +33,22 @@ release gesture.
 1. Land your work on `develop` via PRs.
 2. `develop` -> `staging` PR. CI runs. Merge.
 3. `staging` -> `main` PR. CI runs. Merge.
-4. On `main`, bump `version:` + `CHANGELOG.md` for the package
-   you're releasing.
-5. Tag the release commit with the per-package format:
+4. The push to `main` triggers
+   [`auto-tag.yml`](../.github/workflows/auto-tag.yml). Per
+   changed package it:
+   - Reads the current `pubspec.yaml` version.
+   - Finds the highest existing `<package>-v<semver>` tag.
+   - Picks `max(pubspec_version, highest_tag + 0.0.1)`.
+   - Rewrites the pubspec, commits with `[skip ci]`, tags,
+     pushes.
+5. The tag push fires
+   [`publish.yml`](../.github/workflows/publish.yml), which
+   verifies the tag version matches `pubspec.yaml` and runs
+   `dart pub publish --force` via OIDC.
 
-   ```sh
-   git tag simple_telephony_native-v0.5.0
-   git push origin simple_telephony_native-v0.5.0
-   ```
-
-   The [`publish.yml`](../.github/workflows/publish.yml) matrix
-   job matching that tag prefix fires, verifies the pubspec
-   version, and runs `dart pub publish --force` via OIDC.
+**Shipping a minor or major release** is just *"bump the
+pubspec on the merge PR"*. The auto-tagger sees the pubspec is
+past its patch-bump candidate and respects the manual intent.
 
 ## Tag patterns (one per federated package)
 
