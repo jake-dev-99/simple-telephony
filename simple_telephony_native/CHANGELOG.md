@@ -1,3 +1,11 @@
+## 0.5.0
+
+### Changed
+- `simple_permissions_native: ^1.4.0` now a declared runtime dep (previously referenced only in doc comments after the v0.4.0 role removal). Makes Flutter's plugin-loader wire `:simple_permissions_android` into the consuming app's Gradle build, which lets `simple_telephony_android` delegate its inline `READ_PHONE_STATE` check to `PermissionGuards`.
+
+### Internal
+- `DeviceInfoHandler.hasPhoneStatePermission()` uses `PermissionGuards.isPermissionGranted(...)` instead of `ContextCompat.checkSelfPermission(...)`. Rule 2 of the cross-plugin access-state consolidation (*"native reads flow through simple-permissions"*) now upheld end-to-end in this plugin.
+
 ## 0.4.0
 
 ### Breaking

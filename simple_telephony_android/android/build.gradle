@@ -48,6 +48,15 @@ dependencies {
     if (flutterJar.exists()) {
         compileOnly files(flutterJar)
     }
+    // simple_permissions_android's PermissionGuards — used by
+    // DeviceInfoHandler for READ_PHONE_STATE checks without
+    // duplicating ContextCompat calls. Flutter's plugin-loader
+    // registers :simple_permissions_android as a sibling project
+    // in the final app's Gradle build because our root
+    // simple_telephony_native pubspec declares
+    // simple_permissions_native as a runtime dep.
+    implementation project(':simple_permissions_android')
+
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     implementation 'androidx.core:core-ktx:1.15.0'
     implementation 'androidx.appcompat:appcompat:1.7.0'

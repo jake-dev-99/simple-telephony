@@ -1,3 +1,9 @@
+## 0.5.0
+
+### Changed
+- `DeviceInfoHandler.hasPhoneStatePermission()` now delegates to `PermissionGuards.isPermissionGranted(..., READ_PHONE_STATE)` from `simple_permissions_android` instead of calling `ContextCompat.checkSelfPermission(...)` directly.
+- `android/build.gradle` adds `implementation project(':simple_permissions_android')`. Resolves via Flutter's plugin-loader because `simple_permissions_native` is a declared runtime dep of the native facade.
+
 ## 0.4.0
 
 ### Breaking

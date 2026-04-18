@@ -3,13 +3,12 @@ package io.simplezen.simple_telephony
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
-import android.content.pm.PackageManager
 import android.os.Build
 import android.telephony.SubscriptionInfo
 import android.telephony.SubscriptionManager
-import androidx.core.content.ContextCompat
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
+import io.simplezen.simple_permissions_android.PermissionGuards
 
 /**
  * Handles the `io.simplezen.simple_telephony/device_info` method channel.
@@ -74,11 +73,18 @@ internal class DeviceInfoHandler(
         context.getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE)
             as? SubscriptionManager
 
+    /**
+     * Read-only check. Request flow belongs to simple_permissions_native —
+     * callers request `ReadPhoneState` through `SimplePermissionsNative.instance
+     * .request(const ReadPhoneState())` in Dart. This just asks the OS
+     * whether the grant is currently held so we can short-circuit SIM
+     * enumeration without surfacing a SecurityException.
+     */
     private fun hasPhoneStatePermission(): Boolean =
-        ContextCompat.checkSelfPermission(
+        PermissionGuards.isPermissionGranted(
             context,
             Manifest.permission.READ_PHONE_STATE,
-        ) == PackageManager.PERMISSION_GRANTED
+        )
 
     /** mccString was added in API 29; fall back to the deprecated int before that. */
     private fun mccOrNull(info: SubscriptionInfo): String? =
