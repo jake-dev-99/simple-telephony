@@ -1,28 +1,25 @@
 name: Publish to pub.dev
 
-# Triggered by tag pushes on `main` matching one of the three
-# federated packages' tag prefixes. Each package has its own
-# tag pattern so a release event publishes exactly one package
-# at a time — consistent with pub.dev's automated-publishing
-# contract (one tag pattern per package registration).
+# Triggered by tag pushes on `main` matching one of three
+# federated packages' tag prefixes. See docs/RELEASE.md for
+# the cut-a-release runbook + required one-time pub.dev
+# "Automated publishing" setup per package.
 #
-# Tag examples:
-#   simple_telephony_native-v0.5.0
-#   simple_telephony_android-v0.5.0
-#   simple_telephony_platform_interface-v0.5.0
-#
-# See docs/RELEASE.md for the cut-a-release runbook + the
-# required one-time pub.dev "Automated publishing" setup per
-# package.
+# Tag patterns use GitHub Actions glob syntax, not regex;
+# the verify-version step enforces exact semver.
 on:
   push:
     tags:
-      - 'simple_telephony_native-v[0-9]+.[0-9]+.[0-9]+*'
-      - 'simple_telephony_platform_interface-v[0-9]+.[0-9]+.[0-9]+*'
-      - 'simple_telephony_android-v[0-9]+.[0-9]+.[0-9]+*'
+      - 'simple_telephony_native-v*'
+      - 'simple_telephony_platform_interface-v*'
+      - 'simple_telephony_android-v*'
 
 jobs:
   publish:
+    # Job-level `if:` picks exactly one matrix entry whose
+    # prefix matches the incoming tag, so non-matching
+    # packages never even spin up a runner.
+    if: startsWith(github.ref, format('refs/tags/{0}-v', matrix.package.name))
     permissions:
       id-token: write
     runs-on: ubuntu-latest
@@ -40,18 +37,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        if: startsWith(github.ref, format('refs/tags/{0}-v', matrix.package.name))
 
       - uses: dart-lang/setup-dart@v1
-        if: startsWith(github.ref, format('refs/tags/{0}-v', matrix.package.name))
 
       - name: Install dependencies
-        if: startsWith(github.ref, format('refs/tags/{0}-v', matrix.package.name))
         working-directory: ${{ matrix.package.path }}
         run: dart pub get
 
       - name: Verify pubspec version matches tag
-        if: startsWith(github.ref, format('refs/tags/{0}-v', matrix.package.name))
         working-directory: ${{ matrix.package.path }}
         run: |
           tag_ref="${GITHUB_REF#refs/tags/}"
@@ -63,6 +56,5 @@ jobs:
           fi
 
       - name: Publish
-        if: startsWith(github.ref, format('refs/tags/{0}-v', matrix.package.name))
         working-directory: ${{ matrix.package.path }}
         run: dart pub publish --force
