@@ -3,7 +3,7 @@ description: >-
   Android telephony plugin for Flutter. Receive and control phone calls via
   InCallService when registered as the default dialer. Supports foreground
   event streaming and background delivery with at-least-once guarantees.
-version: 0.4.0
+version: 0.5.0
 homepage: https://www.simplezen.io/development
 repository: https://github.com/simplezen/simple-telephony
 issue_tracker: https://github.com/simplezen/simple-telephony/issues
@@ -25,6 +25,14 @@ dependencies:
     path: ../simple_telephony_android
   simple_telephony_platform_interface:
     path: ../simple_telephony_platform_interface
+  # simple_permissions_native owns access-state vocabulary across the
+  # plugin family. simple_telephony_android's DeviceInfoHandler uses
+  # simple_permissions_android's PermissionGuards to check
+  # READ_PHONE_STATE; the root dep here is what makes Flutter's
+  # plugin-loader wire :simple_permissions_android into the final
+  # app's Gradle build. Role handling (ROLE_DIALER) is also owned by
+  # simple-permissions — see its DefaultDialerApp permission type.
+  simple_permissions_native: ^1.4.0
 
 dev_dependencies:
   flutter_lints: ^5.0.0
