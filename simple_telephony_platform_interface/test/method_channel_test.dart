@@ -2,8 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:simple_telephony_platform_interface/simple_telephony_platform_interface.dart';
 
-const MethodChannel _actionsChannel =
-    MethodChannel(actionsChannelName);
+const MethodChannel _actionsChannel = MethodChannel(actionsChannelName);
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -56,8 +55,8 @@ void main() {
   });
 
   test('getCurrentCalls returns empty list when native returns null', () async {
-    messenger.setMockMethodCallHandler(_actionsChannel,
-        (MethodCall call) async => null);
+    messenger.setMockMethodCallHandler(
+        _actionsChannel, (MethodCall call) async => null);
     final calls = await platform.getCurrentCalls();
     expect(calls, isEmpty);
   });
@@ -75,7 +74,8 @@ void main() {
   });
 
   test('answerPhoneCall decodes notAttached', () async {
-    messenger.setMockMethodCallHandler(_actionsChannel,
+    messenger.setMockMethodCallHandler(
+        _actionsChannel,
         (MethodCall call) async => <String, Object?>{
               'status': 'notAttached',
               'message': 'Call record exists but live call is not attached',
@@ -109,8 +109,10 @@ void main() {
   });
 
   test('unknown control status maps to platformFailure', () async {
-    messenger.setMockMethodCallHandler(_actionsChannel,
-        (MethodCall call) async => <String, Object?>{'status': 'future_status'});
+    messenger.setMockMethodCallHandler(
+        _actionsChannel,
+        (MethodCall call) async =>
+            <String, Object?>{'status': 'future_status'});
     final result = await platform.endPhoneCall('call-1');
     expect(result.status, CallControlStatus.platformFailure);
   });
