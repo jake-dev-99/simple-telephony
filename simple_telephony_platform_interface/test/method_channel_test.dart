@@ -36,10 +36,6 @@ void main() {
           return <String, Object?>{'status': 'success'};
         case 'endPhoneCall':
           return <String, Object?>{'status': 'success'};
-        case 'isDefaultDialerApp':
-          return true;
-        case 'requestDefaultDialerApp':
-          return true;
         case 'registerBackgroundHandler':
           return null;
         default:
@@ -92,20 +88,6 @@ void main() {
   test('endPhoneCall returns success', () async {
     final result = await platform.endPhoneCall('call-1');
     expect(result.isSuccess, isTrue);
-  });
-
-  test('isDefaultDialerApp returns true', () async {
-    expect(await platform.isDefaultDialerApp(), isTrue);
-  });
-
-  test('isDefaultDialerApp returns false when native returns null', () async {
-    messenger.setMockMethodCallHandler(_actionsChannel,
-        (MethodCall call) async => null);
-    expect(await platform.isDefaultDialerApp(), isFalse);
-  });
-
-  test('requestDefaultDialerApp returns granted', () async {
-    expect(await platform.requestDefaultDialerApp(), isTrue);
   });
 
   test('registerBackgroundHandler sends handles', () async {

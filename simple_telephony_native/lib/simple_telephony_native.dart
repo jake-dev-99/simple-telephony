@@ -116,12 +116,25 @@ class SimpleTelephonyNative {
   Future<CallControlResult> endPhoneCall(String callId) =>
       _platform.endPhoneCall(callId);
 
-  /// Returns whether this app currently holds the default dialer role.
-  Future<bool> isDefaultDialerApp() => _platform.isDefaultDialerApp();
-
-  /// Requests the default dialer role. Returns true if granted.
-  Future<bool> requestDefaultDialerApp() =>
-      _platform.requestDefaultDialerApp();
+  // Default-dialer role observation + request lives in
+  // `simple_permissions_native`:
+  //
+  // ```dart
+  // import 'package:simple_permissions_native/simple_permissions_native.dart';
+  //
+  // final held = await SimplePermissionsNative.instance
+  //     .check(const DefaultDialerApp());
+  // final granted = await SimplePermissionsNative.instance
+  //     .request(const DefaultDialerApp());
+  //
+  // // Reactive observation — refreshes on resume and after each request.
+  // final observer = SimplePermissionsNative.instance
+  //     .observe(const [DefaultDialerApp()]);
+  // ```
+  //
+  // Removed from this facade in v0.4.0 so access-state vocabulary
+  // (runtime permissions + app-role handlers) lives in exactly one
+  // plugin.
 
   /// Lists call-log (history) entries matching the given typed filter.
   ///

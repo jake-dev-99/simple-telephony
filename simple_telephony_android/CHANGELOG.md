@@ -1,3 +1,11 @@
+## 0.4.0
+
+### Breaking
+- `CallManager` no longer exposes `isDefaultDialerApp()` / `requestDefaultDialerApp()`; `TelecomMethodHandler` no longer handles the `isDefaultDialerApp` / `requestDefaultDialerApp` method-channel calls. Dialer-role observation + request moved to `simple_permissions_native` via the generic `DefaultDialerApp` permission.
+
+### Internal
+- Dropped `RoleManager` field + `android.app.role.RoleManager` imports from `CallManager`. Dropped the pending-request queue + activity-result listener plumbing that only served role requests.
+
 ## 0.3.0
 
 - NEW: `CallUiLauncher` interface + `SimpleTelephonyCallUi.launcher`

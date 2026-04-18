@@ -42,8 +42,8 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
             <!-- Register as a candidate default-dialer app so
-                 `SimpleTelephonyNative.requestDefaultDialerApp()` can
-                 surface this app in the system dialog. -->
+                 `SimplePermissionsNative.instance.request(DefaultDialerApp())`
+                 can surface this app in the system role dialog. -->
             <intent-filter>
                 <action android:name="android.intent.action.DIAL" />
                 <category android:name="android.intent.category.DEFAULT" />

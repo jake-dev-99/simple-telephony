@@ -1,3 +1,8 @@
+## 0.4.0
+
+### Breaking
+- Removed `SimpleTelephonyPlatform.isDefaultDialerApp()` and `requestDefaultDialerApp()`. Dialer role is now owned by `simple_permissions_native` via the generic `DefaultDialerApp` permission.
+
 ## 0.3.0
 
 - Federation version bump. No public API change. The
