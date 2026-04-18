@@ -170,8 +170,7 @@ Future<void> simpleTelephonyBackgroundDispatcher() async {
   final MethodChannelSimpleTelephony platform =
       SimpleTelephonyPlatform.instance as MethodChannelSimpleTelephony;
 
-  final int? rawHandlerHandle =
-      await platform.actionsChannel.invokeMethod<int>(
+  final int? rawHandlerHandle = await platform.actionsChannel.invokeMethod<int>(
     'getBackgroundHandlerHandle',
   );
   final CallbackHandle? callbackHandle = rawHandlerHandle == null
@@ -232,6 +231,5 @@ Future<void> simpleTelephonyBackgroundDispatcher() async {
     }
   });
 
-  await platform.actionsChannel
-      .invokeMethod<void>('backgroundDispatcherReady');
+  await platform.actionsChannel.invokeMethod<void>('backgroundDispatcherReady');
 }
