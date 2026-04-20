@@ -68,6 +68,46 @@ abstract class SimpleTelephonyPlatform extends PlatformInterface {
     required int userHandle,
   });
 
+  /// Returns the raw Dart callback handle registered via
+  /// [registerBackgroundHandler], or `null` if no handler is registered.
+  ///
+  /// Called from the headless background isolate during bootstrap.
+  Future<int?> fetchBackgroundHandlerHandle() {
+    throw UnimplementedError(
+      'fetchBackgroundHandlerHandle() has not been implemented.',
+    );
+  }
+
+  /// Wires up the background-events channel to invoke [onEvent] for each
+  /// `deliverBackgroundEvent` method call. The implementation is responsible
+  /// for decoding the raw channel payload into a [PhoneCallEvent].
+  ///
+  /// Called once per background-isolate bootstrap.
+  void setBackgroundMessageHandler(
+    Future<void> Function(PhoneCallEvent event) onEvent,
+  ) {
+    throw UnimplementedError(
+      'setBackgroundMessageHandler() has not been implemented.',
+    );
+  }
+
+  /// Acknowledges a delivered background event so native can drop it from its
+  /// retry queue. [eventId] is the id carried in [PhoneCallEvent.eventId].
+  Future<void> acknowledgeBackgroundEvent(String eventId) {
+    throw UnimplementedError(
+      'acknowledgeBackgroundEvent() has not been implemented.',
+    );
+  }
+
+  /// Signals to native that the background isolate has finished bootstrapping
+  /// and is ready to receive events. Called once per bootstrap after the
+  /// message handler is registered.
+  Future<void> notifyBackgroundDispatcherReady() {
+    throw UnimplementedError(
+      'notifyBackgroundDispatcherReady() has not been implemented.',
+    );
+  }
+
   /// Lists call-log entries (history) matching [filter], ordered by [sort],
   /// paged by [limit] / [offset].
   ///

@@ -1,4 +1,4 @@
-# simple_telephony_native_native
+# simple_telephony_native
 
 Android-only Flutter plugin for phone call management via `InCallService`.
 

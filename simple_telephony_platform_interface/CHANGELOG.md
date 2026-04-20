@@ -1,3 +1,11 @@
+## 0.5.0
+
+- Federation version bump. No public API change. The
+  `simple_telephony_android` implementation now delegates its internal
+  `READ_PHONE_STATE` check to `simple_permissions_android`'s
+  `PermissionGuards` so the plugin family has a single source of truth
+  for access-state observations.
+
 ## 0.4.0
 
 ### Breaking
