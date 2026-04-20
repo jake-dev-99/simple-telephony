@@ -120,7 +120,10 @@ abstract class SimpleTelephonyPlatform extends PlatformInterface {
     int? limit,
     int? offset,
   }) {
-    throw UnimplementedError('listCallLog() has not been implemented.');
+    throw UnimplementedError(
+      'listCallLog() is not implemented on the current platform. '
+      'Ensure simple_telephony_android is listed in your pubspec dependencies.',
+    );
   }
 
   /// Returns basic device info (build, Android version, SIM slot count).
@@ -129,7 +132,10 @@ abstract class SimpleTelephonyPlatform extends PlatformInterface {
   /// `SubscriptionManager`. The `deviceId` field requires `READ_PHONE_STATE`
   /// on supported Android versions.
   Future<DeviceInfo> getDeviceInfo() {
-    throw UnimplementedError('getDeviceInfo() has not been implemented.');
+    throw UnimplementedError(
+      'getDeviceInfo() is not implemented on the current platform. '
+      'Ensure simple_telephony_android is listed in your pubspec dependencies.',
+    );
   }
 
   /// Enumerates active SIM subscriptions on the device.
@@ -137,6 +143,9 @@ abstract class SimpleTelephonyPlatform extends PlatformInterface {
   /// Sourced from `SubscriptionManager.getActiveSubscriptionInfoList()` (NOT
   /// a content-provider query). Requires `READ_PHONE_STATE`.
   Future<List<SimCard>> listSimCards() {
-    throw UnimplementedError('listSimCards() has not been implemented.');
+    throw UnimplementedError(
+      'listSimCards() is not implemented on the current platform. '
+      'Ensure simple_telephony_android is listed in your pubspec dependencies.',
+    );
   }
 }
