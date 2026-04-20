@@ -27,14 +27,13 @@ class MethodChannelSimpleTelephony extends SimpleTelephonyPlatform {
   final MethodChannel backgroundEventsChannel =
       const MethodChannel(backgroundEventsChannelName);
 
-  Stream<PhoneCallEvent>? _events;
+  late final Stream<PhoneCallEvent> _events = foregroundEventsChannel
+      .receiveBroadcastStream()
+      .map((dynamic event) => PhoneCallEvent.fromRaw(_asStringMap(event)))
+      .asBroadcastStream();
 
   @override
-  Stream<PhoneCallEvent> get events =>
-      _events ??= foregroundEventsChannel
-          .receiveBroadcastStream()
-          .map((dynamic event) => PhoneCallEvent.fromRaw(_asStringMap(event)))
-          .asBroadcastStream();
+  Stream<PhoneCallEvent> get events => _events;
 
   @override
   Future<List<PhoneCallSnapshot>> getCurrentCalls() async {
