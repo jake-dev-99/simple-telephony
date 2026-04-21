@@ -32,3 +32,5 @@ android/gradlew.bat
 .DS_Store
 *.swp
 *.log
+
+.gradle
