@@ -37,25 +37,18 @@ SimpleTelephonyNative                ← Dart facade your app talks to
 
 ### 1. Become the default dialer
 
-Dialer-role observation + request lives in [`simple_permissions_native`](https://pub.dev/packages/simple_permissions_native) — role handling is not this plugin's concern.
+This plugin does not handle permissions — that's the host app's job.
+`InCallService` callbacks only fire while your app holds the system
+**dialer role** (`android.app.role.DIALER`); call control requires
+`CALL_PHONE` (auto-granted alongside the dialer role) or
+`MANAGE_OWN_CALLS`. Request these with whatever permissions helper you
+use — [`permission_handler`][ph], [`simple_permissions_native`][spn], or
+a hand-rolled `RoleManager` call via a method channel. Gate your UI on
+whether the role is held; call control methods return `permissionDenied`
+until it is.
 
-```dart
-import 'package:simple_permissions_native/simple_permissions_native.dart';
-
-// One-off request.
-final granted =
-    await SimplePermissionsNative.instance.request(const DefaultDialerApp());
-
-// Reactive observation — refreshes on app resume and after each request.
-final observer =
-    SimplePermissionsNative.instance.observe(const [DefaultDialerApp()]);
-observer.stream.listen((result) {
-  final held = result.permissions[const DefaultDialerApp()] ==
-      PermissionGrant.granted;
-  // Gate UI on `held` — call control methods return `permissionDenied`
-  // until the role is held and `InCallService` callbacks won't fire.
-});
-```
+[ph]: https://pub.dev/packages/permission_handler
+[spn]: https://pub.dev/packages/simple_permissions_native
 
 ### 2. Register a background handler
 

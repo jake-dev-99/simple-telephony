@@ -52,12 +52,9 @@ abstract class SimpleTelephonyPlatform extends PlatformInterface {
   /// Attempts to end the call identified by [callId].
   Future<CallControlResult> endPhoneCall(String callId);
 
-  // Dialer-role observation + request is owned by
-  // `simple_permissions_native` — call
-  // `SimplePermissionsNative.instance.check(DefaultDialerApp())`
-  // / `request(DefaultDialerApp())` / `observe(...)` there. Removed
-  // from this interface in v0.4.0 so access-state vocabulary lives
-  // in exactly one plugin.
+  // Dialer-role observation + request is out of scope for this plugin —
+  // host apps handle it with whatever permissions helper they use.
+  // Removed from this interface in v0.4.0.
 
   /// Registers the raw callback handles for background event delivery.
   ///

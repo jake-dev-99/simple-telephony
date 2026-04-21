@@ -104,30 +104,16 @@ class SimpleTelephonyNative {
   Future<CallControlResult> endPhoneCall(String callId) =>
       _platform.endPhoneCall(callId);
 
-  // Default-dialer role observation + request lives in
-  // `simple_permissions_native`:
-  //
-  // ```dart
-  // import 'package:simple_permissions_native/simple_permissions_native.dart';
-  //
-  // final held = await SimplePermissionsNative.instance
-  //     .check(const DefaultDialerApp());
-  // final granted = await SimplePermissionsNative.instance
-  //     .request(const DefaultDialerApp());
-  //
-  // // Reactive observation — refreshes on resume and after each request.
-  // final observer = SimplePermissionsNative.instance
-  //     .observe(const [DefaultDialerApp()]);
-  // ```
-  //
-  // Removed from this facade in v0.4.0 so access-state vocabulary
-  // (runtime permissions + app-role handlers) lives in exactly one
-  // plugin.
+  // Default-dialer role observation + request is out of scope for this
+  // plugin — host apps handle it with whatever permissions helper they
+  // choose (`permission_handler`, `simple_permissions_native`, or a
+  // hand-rolled `RoleManager` method channel). Removed from this facade
+  // in v0.4.0.
 
   /// Lists call-log (history) entries matching the given typed filter.
   ///
-  /// Requires `READ_CALL_LOG` permission (request via
-  /// `simple_permissions_native`).
+  /// Requires `READ_CALL_LOG` permission; request it with whatever
+  /// permissions helper the host app uses.
   Future<List<CallLogEntry>> listCallLog({
     CallLogFilter? filter,
     CallLogSort? sort,
