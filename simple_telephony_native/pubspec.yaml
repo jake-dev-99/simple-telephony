@@ -21,10 +21,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  simple_telephony_android:
-    path: ../simple_telephony_android
-  simple_telephony_platform_interface:
-    path: ../simple_telephony_platform_interface
+  simple_telephony_android: ^0.1.0
+  simple_telephony_platform_interface: ^0.1.0
 
 dev_dependencies:
   flutter_lints: ^5.0.0
