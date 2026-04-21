@@ -19,7 +19,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  simple_permissions_platform_interface: ^1.2.0
+  # Used by SimpleTelephonyAndroid.listCallLog to query the call-log
+  # content provider. Device-info / SIM-card methods go through a dedicated
+  # native MethodChannel instead (not a content-provider query).
+  simple_telephony_platform_interface:
+    path: ../simple_telephony_platform_interface
   simple_query: ^0.2.0
 
 dev_dependencies:
