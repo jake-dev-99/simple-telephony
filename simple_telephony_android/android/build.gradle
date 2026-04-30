@@ -25,17 +25,17 @@ apply plugin: 'kotlin-android'
 
 android {
     namespace 'io.simplezen.simple_telephony'
-    compileSdkVersion 35
+    compileSdkVersion 36
     defaultConfig {
         minSdkVersion 30
         consumerProguardFiles 'consumer-rules.pro'
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
     }
     kotlinOptions {
-        jvmTarget = '17'
+        jvmTarget = JavaVersion.VERSION_21.toString()
     }
     sourceSets {
         main.java.srcDirs += 'src/main/kotlin'
@@ -48,15 +48,6 @@ dependencies {
     if (flutterJar.exists()) {
         compileOnly files(flutterJar)
     }
-    // simple_permissions_android's PermissionGuards — used by
-    // DeviceInfoHandler for READ_PHONE_STATE checks without
-    // duplicating ContextCompat calls. Flutter's plugin-loader
-    // registers :simple_permissions_android as a sibling project
-    // in the final app's Gradle build because our root
-    // simple_telephony_native pubspec declares
-    // simple_permissions_native as a runtime dep.
-    implementation project(':simple_permissions_android')
-
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     implementation 'androidx.core:core-ktx:1.15.0'
     implementation 'androidx.appcompat:appcompat:1.7.0'

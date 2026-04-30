@@ -21,13 +21,14 @@ internal class SimpleTelephonyInCallService : InCallService() {
 
     override fun onCallAdded(call: Call) {
         super.onCallAdded(call)
-        Log.d(TAG, "Call added: ${call.details}")
+        Log.d(TAG, "Call added: state=${call.state}")
         TelecomServiceRuntime.initialize(applicationContext)
-        TelecomServiceRuntime.onCallAdded(call)
-        // Register callback AFTER initialize + onCallAdded so the runtime
-        // is fully initialised and the call is tracked before any
-        // onStateChanged / onDetailsChanged can fire on another thread.
+        // Register the state callback before taking the initial snapshot so
+        // any state change that fires between the snapshot and the callback
+        // hookup is still delivered. The callback's early-return guards handle
+        // the case where runtime init has not completed yet.
         call.registerCallback(callCallback)
+        TelecomServiceRuntime.onCallAdded(call)
     }
 
     override fun onCallRemoved(call: Call) {

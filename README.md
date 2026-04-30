@@ -15,7 +15,7 @@ See [simple_telephony_native/README.md](simple_telephony_native/README.md) for u
 ## Development
 
 ```bash
-# Run all tests
+# Validate all packages (dry run — no publishing)
 tool/publish.sh
 
 # Publish (interface → android → app-facing)
