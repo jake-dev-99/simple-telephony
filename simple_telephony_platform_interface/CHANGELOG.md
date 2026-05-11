@@ -1,10 +1,32 @@
 ## 0.5.0
 
-- Federation version bump. No public API change. The
-  `simple_telephony_android` implementation now delegates its internal
+### Added (additive — non-breaking)
+- `fetchBackgroundHandlerHandle()` — resolves the Dart callback
+  handle for the registered background message handler so the native
+  side can spin up an isolate without round-tripping through the
+  foreground engine.
+- `setBackgroundMessageHandler(handle)` — registers the Dart
+  callback that processes background-delivered call events.
+- `acknowledgeBackgroundEvent(eventId)` — releases a
+  `CallStore`-queued event after the Dart side has persisted it,
+  so a redelivery on cold-start doesn't double-fire.
+- `notifyBackgroundDispatcherReady()` — signals from the background
+  isolate that it's ready to receive events; native side starts
+  draining the queue once this resolves.
+- `listCallLog()`, `getDeviceInfo()`, `listSimCards()` — typed
+  call-log + device + SIM enumeration. Default implementations
+  throw `UnimplementedError` ("Android-only and not implemented on
+  the current platform").
+
+### Changed
+- Default `UnimplementedError` messages reworded to indicate
+  Android-only scope rather than telling consumers to add the
+  implementation package to pubspec (which is misleading in a
+  federated plugin where `default_package` resolution handles it).
+- `simple_telephony_android` now delegates its internal
   `READ_PHONE_STATE` check to `simple_permissions_android`'s
-  `PermissionGuards` so the plugin family has a single source of truth
-  for access-state observations.
+  `PermissionGuards` so the plugin family has a single source of
+  truth for access-state observations.
 
 ## 0.4.0
 
