@@ -118,8 +118,8 @@ abstract class SimpleTelephonyPlatform extends PlatformInterface {
     int? offset,
   }) {
     throw UnimplementedError(
-      'listCallLog() is not implemented on the current platform. '
-      'Ensure simple_telephony_android is listed in your pubspec dependencies.',
+      'listCallLog() is Android-only and not implemented on the '
+      'current platform.',
     );
   }
 
@@ -130,8 +130,8 @@ abstract class SimpleTelephonyPlatform extends PlatformInterface {
   /// on supported Android versions.
   Future<DeviceInfo> getDeviceInfo() {
     throw UnimplementedError(
-      'getDeviceInfo() is not implemented on the current platform. '
-      'Ensure simple_telephony_android is listed in your pubspec dependencies.',
+      'getDeviceInfo() is Android-only and not implemented on the '
+      'current platform.',
     );
   }
 
@@ -141,8 +141,8 @@ abstract class SimpleTelephonyPlatform extends PlatformInterface {
   /// a content-provider query). Requires `READ_PHONE_STATE`.
   Future<List<SimCard>> listSimCards() {
     throw UnimplementedError(
-      'listSimCards() is not implemented on the current platform. '
-      'Ensure simple_telephony_android is listed in your pubspec dependencies.',
+      'listSimCards() is Android-only and not implemented on the '
+      'current platform.',
     );
   }
 }

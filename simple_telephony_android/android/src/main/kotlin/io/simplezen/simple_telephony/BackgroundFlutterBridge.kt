@@ -55,6 +55,16 @@ internal class BackgroundFlutterBridge(
     }
 
     private fun bootstrapEngine(dispatcherHandle: Long) {
+        // `bootstrapInProgress` was set to true by `ensureStarted()`. Two
+        // callers eventually clear it:
+        //   - The success path on the main thread, in `createEngineOnMainThread`,
+        //     once the engine is fully attached.
+        //   - Every failure path here, so a transient failure (missing
+        //     callback handle, corrupt Dart snapshot, etc.) doesn't
+        //     permanently strand the bridge in a "bootstrap in progress"
+        //     state where later `ensureStarted()` calls become silent
+        //     no-ops.
+        var handedOffToMainThread = false
         try {
             val loader = FlutterInjector.instance().flutterLoader()
             loader.startInitialization(context.applicationContext)
@@ -70,13 +80,26 @@ internal class BackgroundFlutterBridge(
             // Construct the engine + channels on the main thread. FlutterEngine
             // and MethodChannel both assume they're created on the platform
             // thread; creating them on a worker thread is undefined behaviour.
+            // From here on, `createEngineOnMainThread` owns the
+            // `bootstrapInProgress` reset.
             mainHandler.post { createEngineOnMainThread(callbackInfo, loader) }
+            handedOffToMainThread = true
         } catch (throwable: Throwable) {
             // Engine bootstrap can fail if the app bundle is missing or the
             // Dart snapshot is corrupt. Log and bail — events stay queued in
             // CallStore and will be retried on the next ensureStarted() call.
             Log.e(TAG, "Failed to start background Flutter engine", throwable)
-            synchronized(this) { bootstrapInProgress = false }
+        } finally {
+            // Clear the flag on every exit path EXCEPT the successful
+            // hand-off to the main thread (where createEngineOnMainThread
+            // takes ownership). Without this, any non-throwing early return
+            // — most importantly the `callbackInfo == null` branch above —
+            // would leave bootstrapInProgress stuck at true and every
+            // future ensureStarted() call would silently skip the engine
+            // start.
+            if (!handedOffToMainThread) {
+                synchronized(this) { bootstrapInProgress = false }
+            }
         }
     }
 
