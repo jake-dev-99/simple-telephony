@@ -12,13 +12,13 @@ pubspec.lock
 doc/api/
 
 # Android
-android/.gradle/
-android/build/
-android/local.properties
-android/**/GeneratedPluginRegistrant.java
+**/android/.gradle/
+**/android/build/
+**/android/local.properties
+**/android/**/GeneratedPluginRegistrant.java
 **/gradle-wrapper.jar
-android/gradlew
-android/gradlew.bat
+**/android/gradlew
+**/android/gradlew.bat
 *.jks
 
 # IDE
@@ -32,3 +32,5 @@ android/gradlew.bat
 .DS_Store
 *.swp
 *.log
+
+.gradle

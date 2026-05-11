@@ -1,17 +1,11 @@
-# Local-dev overrides for the federated sibling packages. pub
-# publish ignores this file, so the published package pulls
-# hosted versions from pub.dev per the constraints in
-# pubspec.yaml.
+# Local-dev override for the in-repo sibling. pub publish
+# ignores this file. simple_query is overridden to the sibling
+# repo path so this package compiles against the new
+# 0.6.0 API surface (pub.dev still has 0.2.0 until the
+# coordinated simple-query release ships).
 dependency_overrides:
   simple_telephony_platform_interface:
     path: ../simple_telephony_platform_interface
-  simple_telephony_android:
-    path: ../simple_telephony_android
-  # simple_telephony_android pulls simple_query ^0.6.0
-  # transitively but pub.dev only has 0.2.0 published. Override
-  # simple_query (and its federated siblings) to the in-flight
-  # 0.6.0 source so resolution succeeds. Drop these once the
-  # simple-query 0.6.0 release lands on pub.dev.
   simple_query:
     path: ../../simple-query/packages/simple_query
   simple_query_platform_interface:

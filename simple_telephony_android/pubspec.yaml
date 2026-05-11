@@ -19,12 +19,14 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  simple_telephony_platform_interface:
-    path: ../simple_telephony_platform_interface
   # Used by SimpleTelephonyAndroid.listCallLog to query the call-log
   # content provider. Device-info / SIM-card methods go through a dedicated
   # native MethodChannel instead (not a content-provider query).
-  simple_query: ^0.2.0
+
+  # Hosted constraints for `pub publish`. Path overrides for
+  # local development live in `pubspec_overrides.yaml`.
+  simple_query: ^0.6.0
+  simple_telephony_platform_interface: ^0.5.0
 
 dev_dependencies:
   flutter_lints: ^5.0.0

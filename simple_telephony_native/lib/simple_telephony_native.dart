@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:ui' show CallbackHandle, DartPluginRegistrant, PluginUtilities;
 
-import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:simple_telephony_platform_interface/simple_telephony_platform_interface.dart';
 
@@ -75,22 +74,11 @@ class SimpleTelephonyNative {
   }) async {
     await disposeForegroundListener();
     _foregroundSubscription = SimpleTelephonyNative.instance.events.listen(
-      (PhoneCallEvent event) async {
-        try {
-          await onCallEvent(event);
-        } catch (error, stackTrace) {
-          FlutterError.reportError(
-            FlutterErrorDetails(
-              exception: error,
-              stack: stackTrace,
-              library: 'simple_telephony_native',
-              context: ErrorDescription(
-                'while handling a foreground phone call event',
-              ),
-            ),
-          );
-        }
-      },
+      (PhoneCallEvent event) => _invokeSafely(
+        onCallEvent,
+        event,
+        context: 'while handling a foreground phone call event',
+      ),
     );
   }
 
@@ -116,30 +104,16 @@ class SimpleTelephonyNative {
   Future<CallControlResult> endPhoneCall(String callId) =>
       _platform.endPhoneCall(callId);
 
-  // Default-dialer role observation + request lives in
-  // `simple_permissions_native`:
-  //
-  // ```dart
-  // import 'package:simple_permissions_native/simple_permissions_native.dart';
-  //
-  // final held = await SimplePermissionsNative.instance
-  //     .check(const DefaultDialerApp());
-  // final granted = await SimplePermissionsNative.instance
-  //     .request(const DefaultDialerApp());
-  //
-  // // Reactive observation — refreshes on resume and after each request.
-  // final observer = SimplePermissionsNative.instance
-  //     .observe(const [DefaultDialerApp()]);
-  // ```
-  //
-  // Removed from this facade in v0.4.0 so access-state vocabulary
-  // (runtime permissions + app-role handlers) lives in exactly one
-  // plugin.
+  // Default-dialer role observation + request is out of scope for this
+  // plugin — host apps handle it with whatever permissions helper they
+  // choose (`permission_handler`, `simple_permissions_native`, or a
+  // hand-rolled `RoleManager` method channel). Removed from this facade
+  // in v0.4.0.
 
   /// Lists call-log (history) entries matching the given typed filter.
   ///
-  /// Requires `READ_CALL_LOG` permission (request via
-  /// `simple_permissions_native`).
+  /// Requires `READ_CALL_LOG` permission; request it with whatever
+  /// permissions helper the host app uses.
   Future<List<CallLogEntry>> listCallLog({
     CallLogFilter? filter,
     CallLogSort? sort,
@@ -161,75 +135,69 @@ class SimpleTelephonyNative {
   Future<List<SimCard>> listSimCards() => _platform.listSimCards();
 }
 
+/// Invokes [handler] with [event], reporting any error via [FlutterError] so a
+/// single faulty handler invocation does not kill the listener / isolate.
+Future<void> _invokeSafely(
+  CallEventHandler handler,
+  PhoneCallEvent event, {
+  required String context,
+}) async {
+  try {
+    await handler(event);
+  } catch (error, stackTrace) {
+    FlutterError.reportError(
+      FlutterErrorDetails(
+        exception: error,
+        stack: stackTrace,
+        library: 'simple_telephony_native',
+        context: ErrorDescription(context),
+      ),
+    );
+  }
+}
+
+/// Resolves the registered user callback from its raw handle, or returns
+/// `null` if none is registered. Throws [StateError] if the registered
+/// callback has the wrong signature.
+CallEventHandler? _resolveBackgroundHandler(int? rawHandle) {
+  if (rawHandle == null) return null;
+  final CallbackHandle handle = CallbackHandle.fromRawHandle(rawHandle);
+  final Function? callback = PluginUtilities.getCallbackFromHandle(handle);
+  if (callback == null) return null;
+  if (callback is CallEventHandler) return callback;
+  throw StateError(
+    'Registered background handler has the wrong signature: '
+    '${callback.runtimeType}',
+  );
+}
+
 /// Entrypoint used by Android to bootstrap a headless isolate for call events.
 @pragma('vm:entry-point')
 Future<void> simpleTelephonyBackgroundDispatcher() async {
   WidgetsFlutterBinding.ensureInitialized();
   DartPluginRegistrant.ensureInitialized();
 
-  final MethodChannelSimpleTelephony platform =
-      SimpleTelephonyPlatform.instance as MethodChannelSimpleTelephony;
+  final SimpleTelephonyPlatform platform = SimpleTelephonyPlatform.instance;
+  final CallEventHandler? handler =
+      _resolveBackgroundHandler(await platform.fetchBackgroundHandlerHandle());
 
-  final int? rawHandlerHandle = await platform.actionsChannel.invokeMethod<int>(
-    'getBackgroundHandlerHandle',
-  );
-  final CallbackHandle? callbackHandle = rawHandlerHandle == null
-      ? null
-      : CallbackHandle.fromRawHandle(rawHandlerHandle);
-  final Function? callback = callbackHandle == null
-      ? null
-      : PluginUtilities.getCallbackFromHandle(callbackHandle);
-
-  if (callback != null && callback is! CallEventHandler) {
-    throw StateError(
-      'Registered background handler has the wrong signature: '
-      '${callback.runtimeType}',
-    );
-  }
-
-  final CallEventHandler? typedCallback = callback as CallEventHandler?;
-
-  platform.backgroundEventsChannel
-      .setMethodCallHandler((MethodCall call) async {
-    if (call.method != 'deliverBackgroundEvent') {
-      return;
-    }
-
-    if (typedCallback == null) {
-      return;
-    }
-
-    final Map<String, dynamic> rawEvent =
-        Map<String, dynamic>.from(call.arguments as Map);
-    final PhoneCallEvent event = PhoneCallEvent.fromRaw(rawEvent);
-
-    try {
-      await typedCallback(event);
-    } catch (error, stackTrace) {
-      // Don't let a handler error kill the background isolate — report it
-      // and continue so subsequent events can still be delivered.
-      FlutterError.reportError(
-        FlutterErrorDetails(
-          exception: error,
-          stack: stackTrace,
-          library: 'simple_telephony_native',
-          context: ErrorDescription(
-            'while handling a background phone call event',
-          ),
-        ),
+  platform.setBackgroundMessageHandler((PhoneCallEvent event) async {
+    if (handler != null) {
+      await _invokeSafely(
+        handler,
+        event,
+        context: 'while handling a background phone call event',
       );
     }
 
-    // Always acknowledge, even after handler errors. The event was delivered;
-    // letting it expire and redeliver won't fix the handler bug and will
-    // cause an infinite retry loop.
-    if (event.eventId != null && event.eventId!.isNotEmpty) {
-      await platform.actionsChannel.invokeMethod<void>(
-        'ackBackgroundEvent',
-        event.eventId,
-      );
+    // Always acknowledge, even after handler errors or when no handler is
+    // registered. The event was delivered; letting it expire and redeliver
+    // won't fix a handler bug and would cause an infinite retry loop.
+    final String? eventId = event.eventId;
+    if (eventId != null && eventId.isNotEmpty) {
+      await platform.acknowledgeBackgroundEvent(eventId);
     }
   });
 
-  await platform.actionsChannel.invokeMethod<void>('backgroundDispatcherReady');
+  await platform.notifyBackgroundDispatcherReady();
 }

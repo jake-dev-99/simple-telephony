@@ -11,54 +11,58 @@ import java.util.concurrent.ConcurrentHashMap
 object TelecomServiceRuntime {
     private const val TAG = "TelecomServiceRuntime"
 
-    private lateinit var appContext: Context
-    private lateinit var callStore: CallStore
-    private lateinit var foregroundBridge: ForegroundChannelBridge
-    private lateinit var backgroundBridge: BackgroundFlutterBridge
+    private data class Components(
+        val appContext: Context,
+        val callStore: CallStore,
+        val foregroundBridge: ForegroundChannelBridge,
+        val backgroundBridge: BackgroundFlutterBridge,
+    )
+
+    @Volatile
+    private var components: Components? = null
 
     private val callIdByCall = ConcurrentHashMap<Call, String>()
     private val liveCallById = ConcurrentHashMap<String, Call>()
 
-    @Volatile
-    var isInitialized = false
-        private set
+    val isInitialized: Boolean get() = components != null
 
     fun initialize(context: Context) {
-        if (isInitialized) {
-            return
-        }
-
+        if (components != null) return
         synchronized(this) {
-            if (isInitialized) {
-                return
-            }
-
-            appContext = context.applicationContext
-            callStore = CallStore(appContext)
-            foregroundBridge = ForegroundChannelBridge()
-            backgroundBridge = BackgroundFlutterBridge(appContext, callStore)
-            isInitialized = true
+            if (components != null) return
+            val appContext = context.applicationContext
+            val callStore = CallStore(appContext)
+            components = Components(
+                appContext = appContext,
+                callStore = callStore,
+                foregroundBridge = ForegroundChannelBridge(),
+                backgroundBridge = BackgroundFlutterBridge(appContext, callStore),
+            )
         }
     }
 
-    internal fun foregroundBridge(): ForegroundChannelBridge = foregroundBridge
+    private fun require(): Components = components
+        ?: error("TelecomServiceRuntime accessed before initialize()")
+
+    internal fun foregroundBridge(): ForegroundChannelBridge = require().foregroundBridge
 
     internal fun registerBackgroundHandler(dispatcherHandle: Long, userHandle: Long) {
+        val runtime = require()
         // Destroy the previous background engine so stale callback handles
         // don't persist after re-registration (e.g. hot restart, app update).
-        backgroundBridge.dispose()
-        callStore.saveBackgroundHandlerConfig(
+        runtime.backgroundBridge.dispose()
+        runtime.callStore.saveBackgroundHandlerConfig(
             BackgroundHandlerConfig(
                 dispatcherHandle = dispatcherHandle,
                 userHandle = userHandle,
             ),
         )
-        backgroundBridge.ensureStarted()
-        backgroundBridge.flushPendingEvents()
+        runtime.backgroundBridge.ensureStarted()
+        runtime.backgroundBridge.flushPendingEvents()
     }
 
     internal fun currentCalls(): List<Map<String, Any?>> =
-        callStore.getCurrentCalls().map { it.toMap() }
+        require().callStore.getCurrentCalls().map { it.toMap() }
 
     internal fun answerCall(callId: String): CallControlResult {
         val liveCall = liveCallById[callId]
@@ -75,7 +79,7 @@ object TelecomServiceRuntime {
             }
         }
 
-        return if (callStore.getCall(callId) != null) {
+        return if (require().callStore.getCall(callId) != null) {
             CallControlResult(
                 CallControlStatus.notAttached,
                 "Call record exists but the live telecom call is not attached",
@@ -100,7 +104,7 @@ object TelecomServiceRuntime {
             }
         }
 
-        return if (callStore.getCall(callId) != null) {
+        return if (require().callStore.getCall(callId) != null) {
             CallControlResult(
                 CallControlStatus.notAttached,
                 "Call record exists but the live telecom call is not attached",
@@ -147,7 +151,7 @@ object TelecomServiceRuntime {
             return existing
         }
 
-        val callId = callStore.findReusableCallId(
+        val callId = require().callStore.findReusableCallId(
             phoneNumber = call.detailsPhoneNumber(),
             isIncoming = call.isIncomingCall(),
         ) ?: UUID.randomUUID().toString()
@@ -161,12 +165,13 @@ object TelecomServiceRuntime {
         state: Int,
         disconnectCause: DisconnectCause?,
     ): Map<String, Any?> {
+        val runtime = require()
         // Synchronize the entire read-mutate-write sequence against callStore
         // so that rapid state changes on different threads cannot interleave.
-        val (payload, shouldFlushBackground) = synchronized(callStore) {
+        val (payload, shouldFlushBackground) = synchronized(runtime.callStore) {
             val callId = resolveCallId(call)
             val now = System.currentTimeMillis()
-            val existingRecord = callStore.getCall(callId)
+            val existingRecord = runtime.callStore.getCall(callId)
             val eventId = UUID.randomUUID().toString()
             val record = CallSessionRecord(
                 callId = callId,
@@ -177,13 +182,13 @@ object TelecomServiceRuntime {
                 isLive = state != Call.STATE_DISCONNECTED,
                 // Snapshot the count *before* we enqueue this event below,
                 // so the record reflects already-queued events at dispatch time.
-                pendingEventCount = callStore.queuedBackgroundEventCount(callId),
+                pendingEventCount = runtime.callStore.queuedBackgroundEventCount(callId),
                 phoneNumber = call.detailsPhoneNumber(),
                 displayName = call.details?.callerDisplayName?.toString(),
                 disconnectCause = disconnectCauseToString(disconnectCause),
             )
 
-            callStore.upsertCall(record)
+            runtime.callStore.upsertCall(record)
 
             val eventPayload = mutableMapOf<String, Any?>(
                 "eventId" to eventId,
@@ -196,9 +201,9 @@ object TelecomServiceRuntime {
                 "disconnectCause" to record.disconnectCause,
             )
 
-            val hasBackgroundHandler = callStore.getBackgroundHandlerConfig() != null
+            val hasBackgroundHandler = runtime.callStore.getBackgroundHandlerConfig() != null
             if (hasBackgroundHandler) {
-                callStore.enqueueBackgroundEvent(
+                runtime.callStore.enqueueBackgroundEvent(
                     PendingCallEvent(
                         eventId = eventId,
                         callId = callId,
@@ -212,11 +217,11 @@ object TelecomServiceRuntime {
         }
 
         // Emit outside the lock — these don't touch callStore and may block.
-        foregroundBridge.emit(payload)
+        runtime.foregroundBridge.emit(payload)
 
         if (shouldFlushBackground) {
-            backgroundBridge.ensureStarted()
-            backgroundBridge.flushPendingEvents()
+            runtime.backgroundBridge.ensureStarted()
+            runtime.backgroundBridge.flushPendingEvents()
         }
 
         // Notify the host-side UI launcher, if one is registered. This is the
@@ -225,7 +230,7 @@ object TelecomServiceRuntime {
         // bridges so that a host-side exception can't starve the event stream.
         SimpleTelephonyCallUi.launcher?.let { launcher ->
             try {
-                launcher.onCallEvent(appContext, payload)
+                launcher.onCallEvent(runtime.appContext, payload)
             } catch (throwable: Throwable) {
                 Log.e(TAG, "CallUiLauncher threw; continuing", throwable)
             }
