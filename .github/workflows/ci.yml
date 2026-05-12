@@ -13,6 +13,12 @@ name: CI
 on:
   pull_request:
     branches: [main]
+  # Also run on direct pushes to main so release.yml's commit
+  # (which lands directly via deploy-key bypass, skipping the PR
+  # gate) still goes through analyze + test before any subsequent
+  # tag fires publish.yml.
+  push:
+    branches: [main]
 
 jobs:
   package-tests:
@@ -28,25 +34,25 @@ jobs:
 
     steps:
       - name: Checkout simple-telephony
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           path: simple-telephony
 
       - name: Checkout simple-permissions (sibling dep)
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           repository: jake-dev-99/simple-permissions
           ref: main
           path: simple-permissions
 
       - name: Checkout simple-query (sibling dep, pre-publish 0.6.0)
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           repository: jake-dev-99/simple-query
           ref: main
           path: simple-query
 
-      - uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           channel: stable
 
