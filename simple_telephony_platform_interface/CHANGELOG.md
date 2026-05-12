@@ -1,3 +1,22 @@
+## 0.1.1
+
+### Reset to align with pub.dev's published series
+
+This package on pub.dev is at 0.1.0. Local git tag 0.5.0 (and
+develop pubspec at 0.5.0) was authored ahead of the next publish
+but never reached pub.dev. Orphan tag deleted from origin and the
+version reset to the smallest patch above the last-published
+version (0.1.0 → 0.1.1).
+
+Cross-package constraints lowered to match the published series:
+* `simple_telephony_*` siblings: `^0.5.0` → `^0.1.0`
+* `simple_query`: `^0.6.0` → `^0.2.0`
+
+The 0.2 — 0.5 work described in the entries below is not lost —
+it lives in source and will surface in published form through
+subsequent patch / minor / major bumps as appropriate. Entries
+kept for archival reference.
+
 ## 0.5.0
 
 ### Added (additive — non-breaking)

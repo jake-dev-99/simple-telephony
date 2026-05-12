@@ -3,7 +3,7 @@ description: >-
   Android telephony plugin for Flutter. Receive and control phone calls via
   InCallService when registered as the default dialer. Supports foreground
   event streaming and background delivery with at-least-once guarantees.
-version: 0.5.0
+version: 0.1.1
 homepage: https://www.simplezen.io/development
 repository: https://github.com/simplezen/simple-telephony
 issue_tracker: https://github.com/simplezen/simple-telephony/issues
@@ -23,8 +23,8 @@ dependencies:
     sdk: flutter
   # Hosted constraints for `pub publish`. Path overrides for
   # local development live in `pubspec_overrides.yaml`.
-  simple_telephony_android: ^0.5.0
-  simple_telephony_platform_interface: ^0.5.0
+  simple_telephony_android: ^0.1.0
+  simple_telephony_platform_interface: ^0.1.0
 
 dev_dependencies:
   flutter_lints: ^5.0.0
