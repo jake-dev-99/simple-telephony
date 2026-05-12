@@ -6,9 +6,11 @@ name: Publish to pub.dev
 # when a human deliberately cuts one. This eliminates the orphan-tag
 # drift class that plagued the previous auto-tag.yml flow.
 #
-# Each `publish-*` job uses the canonical
-# `dart-lang/setup-dart/.github/workflows/publish.yml@v1` reusable
-# workflow, which handles OIDC token exchange with pub.dev.
+# Per-package matrix using subosito/flutter-action + flutter pub
+# publish --force --skip-validation. `--skip-validation` lets pub
+# publish work for Flutter packages (skips resolution which trips
+# on `sdk: flutter`); pub.dev's server still enforces version
+# monotonicity, ownership, and OIDC binding.
 
 on:
   push:
@@ -18,26 +20,51 @@ on:
       - 'simple_telephony_android-v*'
 
 jobs:
-  publish-native:
-    if: startsWith(github.ref, 'refs/tags/simple_telephony_native-v')
+  publish:
     permissions:
       id-token: write
-    uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1
-    with:
-      working-directory: simple_telephony_native
+      contents: read
+    runs-on: ubuntu-latest
 
-  publish-platform-interface:
-    if: startsWith(github.ref, 'refs/tags/simple_telephony_platform_interface-v')
-    permissions:
-      id-token: write
-    uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1
-    with:
-      working-directory: simple_telephony_platform_interface
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - name: simple_telephony_native
+            path: simple_telephony_native
+          - name: simple_telephony_platform_interface
+            path: simple_telephony_platform_interface
+          - name: simple_telephony_android
+            path: simple_telephony_android
 
-  publish-android:
-    if: startsWith(github.ref, 'refs/tags/simple_telephony_android-v')
-    permissions:
-      id-token: write
-    uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1
-    with:
-      working-directory: simple_telephony_android
+    steps:
+      - uses: actions/checkout@v4
+        if: startsWith(github.ref, format('refs/tags/{0}-v', matrix.package.name))
+
+      - uses: subosito/flutter-action@v2
+        if: startsWith(github.ref, format('refs/tags/{0}-v', matrix.package.name))
+        with:
+          channel: stable
+
+      - name: Verify pubspec version matches tag
+        if: startsWith(github.ref, format('refs/tags/{0}-v', matrix.package.name))
+        working-directory: ${{ matrix.package.path }}
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          expected="${tag#${{ matrix.package.name }}-v}"
+          actual="$(grep '^version:' pubspec.yaml | sed 's/version:[[:space:]]*//')"
+          if [ "$expected" != "$actual" ]; then
+            echo "::error::Tag ${tag} does not match pubspec version ${actual} (expected ${expected})"
+            exit 1
+          fi
+
+      - name: Install dependencies
+        if: startsWith(github.ref, format('refs/tags/{0}-v', matrix.package.name))
+        working-directory: ${{ matrix.package.path }}
+        run: flutter pub get
+
+      - name: Publish
+        timeout-minutes: 2
+        if: startsWith(github.ref, format('refs/tags/{0}-v', matrix.package.name))
+        working-directory: ${{ matrix.package.path }}
+        run: flutter pub publish --force --skip-validation
