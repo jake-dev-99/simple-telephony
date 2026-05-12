@@ -1,0 +1,6 @@
+# Exclude files that are tracked in git but not relevant to consumers
+# of the published package. `android/gradlew` is for someone running
+# gradle on this package directly; consumers run gradle from their
+# own Flutter project and never invoke this script.
+android/gradlew
+android/gradlew.bat
