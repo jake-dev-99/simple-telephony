@@ -12,7 +12,7 @@ name: CI
 # `flutter pub get`.
 on:
   pull_request:
-    branches: [develop, staging, main]
+    branches: [main]
 
 jobs:
   package-tests:
