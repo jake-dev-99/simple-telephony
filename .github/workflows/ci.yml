@@ -4,10 +4,12 @@ name: CI
 # (develop -> staging -> main). CD handles merge + tag side.
 #
 # simple_telephony_native path-overrides simple-permissions for
-# PermissionGuards during pre-publish cycles. CI lays the sibling
-# checkout alongside this repo under the workspace so relative
-# paths (`../../simple-permissions` from simple_telephony_native/)
-# resolve during `flutter pub get`.
+# PermissionGuards during pre-publish cycles, and simple_telephony_*
+# packages override simple-query to its in-flight 0.6.0 source until
+# that release lands on pub.dev. CI lays both sibling checkouts
+# alongside this repo under the workspace so relative paths
+# (`../../simple-permissions`, `../../simple-query`) resolve during
+# `flutter pub get`.
 on:
   pull_request:
     branches: [develop, staging, main]
@@ -36,6 +38,13 @@ jobs:
           repository: jake-dev-99/simple-permissions
           ref: main
           path: simple-permissions
+
+      - name: Checkout simple-query (sibling dep, pre-publish 0.6.0)
+        uses: actions/checkout@v4
+        with:
+          repository: jake-dev-99/simple-query
+          ref: main
+          path: simple-query
 
       - uses: subosito/flutter-action@v2
         with:
