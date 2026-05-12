@@ -71,6 +71,7 @@ class _HomePageState extends State<_HomePage> {
   PhoneCallEvent? _latestEvent;
   bool _isDefaultDialer = false;
   StreamSubscription<PhoneCallEvent>? _eventSub;
+  String? _loadError;
 
   @override
   void initState() {
@@ -95,15 +96,22 @@ class _HomePageState extends State<_HomePage> {
     DeviceInfo? device;
     var sims = const <SimCard>[];
     var callLog = const <CallLogEntry>[];
+    final errors = <String>[];
     try {
       device = await SimpleTelephonyNative.instance.getDeviceInfo();
-    } catch (_) {/* swallow on permission-denied */}
+    } catch (error) {
+      errors.add('getDeviceInfo: $error');
+    }
     try {
       sims = await SimpleTelephonyNative.instance.listSimCards();
-    } catch (_) {/* swallow */}
+    } catch (error) {
+      errors.add('listSimCards: $error');
+    }
     try {
       callLog = await SimpleTelephonyNative.instance.listCallLog();
-    } catch (_) {/* swallow */}
+    } catch (error) {
+      errors.add('listCallLog: $error');
+    }
 
     if (!mounted) return;
     setState(() {
@@ -111,6 +119,7 @@ class _HomePageState extends State<_HomePage> {
       _deviceInfo = device;
       _simCards = sims;
       _callLog = callLog;
+      _loadError = errors.isEmpty ? null : errors.join('\n');
     });
   }
 
@@ -128,6 +137,21 @@ class _HomePageState extends State<_HomePage> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            if (_loadError != null)
+              Container(
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.errorContainer,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  _loadError!,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onErrorContainer,
+                  ),
+                ),
+              ),
             _section('Default dialer', [
               Text(_isDefaultDialer ? 'YES' : 'NO'),
               const SizedBox(height: 8),

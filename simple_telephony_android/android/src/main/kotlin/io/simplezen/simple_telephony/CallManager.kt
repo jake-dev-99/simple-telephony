@@ -7,12 +7,11 @@ import android.telecom.TelecomManager
 import android.util.Log
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 
-/// Dialer role (`android.app.role.DIALER`) observation + request is
-/// owned by `simple_permissions_native` — consumers call
-/// `SimplePermissionsNative.instance.check(DefaultDialerApp())` or
-/// `request(DefaultDialerApp())` / observe via `observe(...)`.
-/// This class stays focused on actual telephony operations (place,
-/// answer, end calls).
+/// Focused on actual telephony operations (place, answer, end calls).
+/// Dialer-role observation + request is out of scope for this plugin —
+/// host apps handle that with whatever permissions helper they use
+/// (`permission_handler`, `simple_permissions_native`, or a hand-rolled
+/// `RoleManager` call).
 internal class CallManager(private val context: Context) {
     private val telecomManager =
         context.getSystemService(Context.TELECOM_SERVICE) as TelecomManager

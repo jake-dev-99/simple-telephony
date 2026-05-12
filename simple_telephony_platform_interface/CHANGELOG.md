@@ -1,3 +1,52 @@
+## 0.1.1
+
+### Reset to align with pub.dev's published series
+
+This package on pub.dev is at 0.1.0. Local git tag 0.5.0 (and
+develop pubspec at 0.5.0) was authored ahead of the next publish
+but never reached pub.dev. Orphan tag deleted from origin and the
+version reset to the smallest patch above the last-published
+version (0.1.0 → 0.1.1).
+
+Cross-package constraints lowered to match the published series:
+* `simple_telephony_*` siblings: `^0.5.0` → `^0.1.0`
+* `simple_query`: `^0.6.0` → `^0.2.0`
+
+The 0.2 — 0.5 work described in the entries below is not lost —
+it lives in source and will surface in published form through
+subsequent patch / minor / major bumps as appropriate. Entries
+kept for archival reference.
+
+## 0.5.0
+
+### Added (additive — non-breaking)
+- `fetchBackgroundHandlerHandle()` — resolves the Dart callback
+  handle for the registered background message handler so the native
+  side can spin up an isolate without round-tripping through the
+  foreground engine.
+- `setBackgroundMessageHandler(handle)` — registers the Dart
+  callback that processes background-delivered call events.
+- `acknowledgeBackgroundEvent(eventId)` — releases a
+  `CallStore`-queued event after the Dart side has persisted it,
+  so a redelivery on cold-start doesn't double-fire.
+- `notifyBackgroundDispatcherReady()` — signals from the background
+  isolate that it's ready to receive events; native side starts
+  draining the queue once this resolves.
+- `listCallLog()`, `getDeviceInfo()`, `listSimCards()` — typed
+  call-log + device + SIM enumeration. Default implementations
+  throw `UnimplementedError` ("Android-only and not implemented on
+  the current platform").
+
+### Changed
+- Default `UnimplementedError` messages reworded to indicate
+  Android-only scope rather than telling consumers to add the
+  implementation package to pubspec (which is misleading in a
+  federated plugin where `default_package` resolution handles it).
+- `simple_telephony_android` now delegates its internal
+  `READ_PHONE_STATE` check to `simple_permissions_android`'s
+  `PermissionGuards` so the plugin family has a single source of
+  truth for access-state observations.
+
 ## 0.4.0
 
 ### Breaking

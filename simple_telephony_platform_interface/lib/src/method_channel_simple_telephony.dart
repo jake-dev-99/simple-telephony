@@ -27,26 +27,21 @@ class MethodChannelSimpleTelephony extends SimpleTelephonyPlatform {
   final MethodChannel backgroundEventsChannel =
       const MethodChannel(backgroundEventsChannelName);
 
-  Stream<PhoneCallEvent>? _events;
+  late final Stream<PhoneCallEvent> _events = foregroundEventsChannel
+      .receiveBroadcastStream()
+      .map((dynamic event) => PhoneCallEvent.fromRaw(_asStringMap(event)))
+      .asBroadcastStream();
 
   @override
-  Stream<PhoneCallEvent> get events => _events ??=
-          foregroundEventsChannel.receiveBroadcastStream().map((dynamic event) {
-        return PhoneCallEvent.fromRaw(Map<String, dynamic>.from(event as Map));
-      }).asBroadcastStream();
+  Stream<PhoneCallEvent> get events => _events;
 
   @override
   Future<List<PhoneCallSnapshot>> getCurrentCalls() async {
-    final List<dynamic> rawCalls =
-        await actionsChannel.invokeMethod<List<dynamic>>('getCurrentCalls') ??
-            const <dynamic>[];
-
+    final Object? raw = await actionsChannel.invokeMethod('getCurrentCalls');
+    if (raw == null) return const <PhoneCallSnapshot>[];
+    final List<Object?> rawCalls = _asList(raw);
     return rawCalls
-        .map(
-          (dynamic raw) => PhoneCallSnapshot.fromRaw(
-            Map<String, dynamic>.from(raw as Map),
-          ),
-        )
+        .map((Object? entry) => PhoneCallSnapshot.fromRaw(_asStringMap(entry)))
         .toList(growable: false);
   }
 
@@ -73,11 +68,59 @@ class MethodChannelSimpleTelephony extends SimpleTelephonyPlatform {
     });
   }
 
+  @override
+  Future<int?> fetchBackgroundHandlerHandle() =>
+      actionsChannel.invokeMethod<int>('getBackgroundHandlerHandle');
+
+  @override
+  void setBackgroundMessageHandler(
+    Future<void> Function(PhoneCallEvent event) onEvent,
+  ) {
+    backgroundEventsChannel.setMethodCallHandler((MethodCall call) async {
+      if (call.method != 'deliverBackgroundEvent') return;
+      final PhoneCallEvent event =
+          PhoneCallEvent.fromRaw(_asStringMap(call.arguments));
+      await onEvent(event);
+    });
+  }
+
+  @override
+  Future<void> acknowledgeBackgroundEvent(String eventId) =>
+      actionsChannel.invokeMethod<void>('ackBackgroundEvent', eventId);
+
+  @override
+  Future<void> notifyBackgroundDispatcherReady() =>
+      actionsChannel.invokeMethod<void>('backgroundDispatcherReady');
+
   Future<CallControlResult> _invokeControl(
     String method, [
     Object? argument,
   ]) async {
-    final dynamic raw = await actionsChannel.invokeMethod(method, argument);
-    return CallControlResult.fromRaw(Map<String, dynamic>.from(raw as Map));
+    final Object? raw = await actionsChannel.invokeMethod(method, argument);
+    return CallControlResult.fromRaw(_asStringMap(raw));
   }
+}
+
+/// Coerces a platform channel value into `Map<String, dynamic>`, throwing a
+/// [PlatformException] with a predictable error code when the shape is wrong.
+Map<String, dynamic> _asStringMap(Object? raw) {
+  if (raw is Map) {
+    return Map<String, dynamic>.from(raw);
+  }
+  throw PlatformException(
+    code: 'malformed-payload',
+    message: 'Expected a Map from the platform, got ${raw.runtimeType}.',
+  );
+}
+
+/// Coerces a platform channel value into `List<Object?>`, throwing a
+/// [PlatformException] with a predictable error code when the shape is wrong.
+List<Object?> _asList(Object? raw) {
+  if (raw is List) {
+    return List<Object?>.from(raw);
+  }
+  throw PlatformException(
+    code: 'malformed-payload',
+    message: 'Expected a List from the platform, got ${raw.runtimeType}.',
+  );
 }
