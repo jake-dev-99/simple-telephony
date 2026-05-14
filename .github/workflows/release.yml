@@ -130,7 +130,10 @@ jobs:
             # with an unindented line (e.g. the trailing `"` at column
             # 1) breaks the YAML `run: |` block-scalar indent contract
             # and the whole workflow fails to parse before it can run.
-            entry_block=$(printf '## %s\n\n%s\n' "$next" "$entries")
+            # Use `printf -v` instead of command substitution so trailing
+            # newlines are preserved; end with a blank line so an existing
+            # top `## ...` header remains visually separated.
+            printf -v entry_block '## %s\n\n%s\n\n' "$next" "$entries"
 
             summary+="$(printf '\n=== %s ===\n  current:  %s\n  next:     %s\n  tag:      %s\n  range:    %s\n%s\n' \
               "$pkg" "$current" "$next" "$tag" "$range_label" "$entries")"
