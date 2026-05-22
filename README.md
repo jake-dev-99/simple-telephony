@@ -1,5 +1,7 @@
 # simple_telephony_native
 
+> **Contributing / agents:** see [`AGENTS.md`](AGENTS.md) for build·test·verify, conventions, and the "What NOT to do" rulings (Claude Code reads it via [`CLAUDE.md`](CLAUDE.md)). Governed by the Simple Zen SOP family (Notion).
+
 A federated Flutter plugin for phone call management.
 
 ## Packages
