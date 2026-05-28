@@ -204,10 +204,31 @@ jobs:
           # `push` webhook event — the Deploy workflow's `on: push:
           # tags:` trigger keys off those events. App-token pushes
           # (unlike GITHUB_TOKEN) DO trigger downstream workflows.
+          #
+          # Partial-failure handling: the commit push is atomic on its
+          # own; if it fails, `set -e` aborts the step before any tag
+          # push runs (clean — main hasn't advanced, no tags exist
+          # yet). After the commit lands, each tag is pushed inside a
+          # collect-failures loop so a single bad tag push doesn't
+          # mask later successes. At the end, if any tag push failed,
+          # the step exits non-zero with a summary listing every
+          # failed tag and the manual recovery command — the
+          # successful tags still fire Deploy in parallel.
           git push origin HEAD:main
 
+          failed_tags=()
           for tag in "${new_tags[@]}"; do
-            git push origin "$tag"
+            if ! git push origin "$tag"; then
+              failed_tags+=("$tag")
+              echo "::warning::tag push failed: $tag — will report at end"
+            fi
           done
+
+          if [ ${#failed_tags[@]} -gt 0 ]; then
+            echo "::error::${#failed_tags[@]} tag push(es) failed: ${failed_tags[*]}"
+            echo "::error::main has advanced. Manually retry: $(printf 'git push origin %s; ' "${failed_tags[@]}")"
+            echo "::error::Successful tags still fire Deploy in parallel."
+            exit 1
+          fi
 
           echo "::notice::Pushed commit + ${#new_tags[@]} tag(s). The Deploy workflow will fire per tag."
