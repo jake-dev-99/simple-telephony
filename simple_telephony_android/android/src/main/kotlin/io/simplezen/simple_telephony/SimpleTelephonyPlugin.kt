@@ -48,7 +48,7 @@ class SimpleTelephonyPlugin : FlutterPlugin, ActivityAware {
         methodHandler = null
         deviceInfoHandler = null
         callManager = null
-        TelecomServiceRuntime.foregroundBridge().detach()
+        TelecomServiceRuntime.foregroundBridge().detach(binding.binaryMessenger)
     }
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
