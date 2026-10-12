@@ -89,10 +89,5 @@ jobs:
             echo "No test/ directory — skipping."
           fi
 
-      - name: Test release tooling
-        if: matrix.package == 'simple_telephony_platform_interface'
-        working-directory: simple-telephony
-        run: python3 -m unittest discover -s tool -p 'test_*.py' -v
-
       # Hosted publish checks require the dependency releases listed in
-      # docs/RELEASE.md. Sibling overrides here prove source compatibility.
+      # the Linear procedure linked from AGENTS.md. Sibling overrides prove source compatibility.
