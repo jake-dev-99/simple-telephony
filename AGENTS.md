@@ -59,6 +59,12 @@ flutter test
 short-lived branch per work item; PRs target `main`. Releases are cut via
 `.github/workflows/release.yml`; see [`docs/RELEASE.md`](docs/RELEASE.md).
 
+Release batches select changed packages and affected dependents. After one manual
+Cut Release dispatch, hourly scheduled runs resume only that frozen batch;
+quota deadlines and completed publications survive runner restarts. Per-package
+hosted validation precedes each dependency-ordered tag. See the release guide
+above for dry-run, resume, cancellation, and first-publication prerequisites.
+
 ## What NOT to do (binding rulings)
 
 - **Don't break the platform-interface API without a major version bump** —
