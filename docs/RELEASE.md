@@ -17,14 +17,19 @@ feature branch
 1. Land the reviewed change through a PR to `main`.
 2. Dispatch [`release.yml`](../.github/workflows/release.yml) on `main`,
    selecting one package and a `patch`, `minor`, or `major` increment.
-   The workflow increments that package's current source version, prepends
-   its CHANGELOG entry, commits, tags, and pushes. It does not rewrite
+   The workflow increments that package's current source version, moves
+   `Unreleased` notes into the new version's CHANGELOG entry alongside the
+   git-log notes, commits, tags, and pushes. It does not rewrite
    dependency constraints. `dry_run=true` previews the version and notes;
    this workflow does not validate dependency resolution or analysis.
 3. The tag triggers [`deploy.yml`](../.github/workflows/deploy.yml), which
-   verifies ancestry and version before publishing via OIDC. The current
-   publish step skips validation, so run resolution, analysis, tests, and
-   `flutter pub publish --dry-run` locally before cutting.
+   verifies ancestry and version, removes development overrides from the
+   runner's package checkout, resolves hosted dependencies, and publishes
+   with validation via Flutter and OIDC. Run hosted resolution, analysis,
+   tests, and `flutter pub publish --dry-run` locally before cutting; also
+   resolve the facade's example separately. Deploy's root resolution uses
+   `--no-example` because the example is not part of the package's runtime
+   dependency graph.
 
 ## Current dependency release order
 
@@ -47,8 +52,8 @@ prerequisite to appear on pub.dev:
    `simple_permissions_native ^1.6.4`.
 
 Do not select `all`: tag-triggered publish jobs run independently and can
-start before their prerequisites are published. Keep dependent PRs draft
-while those publications are unavailable. Development sibling overrides
+start before their prerequisites are published. Publish prerequisites
+before cutting each dependent release. Development sibling overrides
 prove source compatibility only; remove them in isolated copies for the
 published dependency checks. For publication failures and manual retry
 caveats, consult the recovery notes in [Deploy](../.github/workflows/deploy.yml)
@@ -76,7 +81,7 @@ configured:
    - **Tag pattern**: `<package>-v{{version}}`
 4. Save.
 
-Without this, `dart pub publish` from the workflow errors with
+Without this, publication from the workflow errors with
 `missing OIDC authorization` and the release fails cleanly.
 
 ## Why this shape

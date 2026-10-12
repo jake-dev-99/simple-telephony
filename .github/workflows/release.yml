@@ -1,7 +1,7 @@
 name: Cut Release
 
 # Manual workflow that bumps a package's pubspec version, generates a
-# CHANGELOG entry from git log since the last tag for that package,
+# CHANGELOG entry from Unreleased notes and git log since its last tag,
 # commits the bump + entry, tags the commit, and pushes both. The tag
 # push triggers the "Deploy" workflow which runs the canonical pub.dev OIDC
 # publish flow.
@@ -132,18 +132,11 @@ jobs:
             fi
             [ -z "$entries" ] && entries="- (no commits in $dir since ${prev_tag:-repo init})"
 
-            # Build the CHANGELOG entry and per-package summary via
-            # printf rather than multi-line bash literals — a literal
-            # with an unindented line (e.g. the trailing `"` at column
-            # 1) breaks the YAML `run: |` block-scalar indent contract
-            # and the whole workflow fails to parse before it can run.
-            # Use `printf -v` instead of command substitution so trailing
-            # newlines are preserved; end with a blank line so an existing
-            # top `## ...` header remains visually separated.
-            printf -v entry_block '## %s\n\n%s\n\n' "$next" "$entries"
+            # Preview and actual cut use the same authored + generated notes.
+            entry_block="$(python3 tool/release_changelog.py "$changelog" "$next" "$entries")"
 
             summary+="$(printf '\n=== %s ===\n  current:  %s\n  next:     %s\n  tag:      %s\n  range:    %s\n%s\n' \
-              "$pkg" "$current" "$next" "$tag" "$range_label" "$entries")"
+              "$pkg" "$current" "$next" "$tag" "$range_label" "$entry_block")"
 
             if [ "$DRY_RUN" = "true" ]; then
               continue
@@ -152,12 +145,7 @@ jobs:
             sed -i -E "s/^version:[[:space:]]*.*$/version: ${next}/" "$pubspec"
             git add "$pubspec"
 
-            if [ -f "$changelog" ]; then
-              { printf '%s\n' "$entry_block"; cat "$changelog"; } > "${changelog}.new"
-              mv "${changelog}.new" "$changelog"
-            else
-              printf '%s\n' "$entry_block" > "$changelog"
-            fi
+            python3 tool/release_changelog.py "$changelog" "$next" "$entries" --write
             git add "$changelog"
 
             new_tags+=("$tag")

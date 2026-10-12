@@ -8,7 +8,7 @@ This package is [endorsed](https://flutter.dev/to/endorsed-federated-plugin), wh
 
 ```yaml
 dependencies:
-  simple_telephony_native: ^0.1.0
+  simple_telephony_native: ^1.0.0
 ```
 
 ## Direct usage
@@ -17,7 +17,11 @@ If you want to use this package directly (without the app-facing package), add i
 
 ```yaml
 dependencies:
-  simple_telephony_android: ^0.1.0
+  simple_telephony_android: ^1.0.0
 ```
 
 Then use `SimpleTelephonyPlatform.instance` directly.
+
+Call-log queries use Query's canonical field contract. Query failures,
+including permission errors, propagate to the caller; an empty list means
+the query succeeded with no matching records.

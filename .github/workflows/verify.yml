@@ -9,7 +9,7 @@ name: Verify
 #
 # simple_telephony_native path-overrides simple-permissions for
 # PermissionGuards during pre-publish cycles, and simple_telephony_*
-# packages override simple-query to its in-flight 0.6.0 source until
+# packages override simple-query to its in-flight 0.3.0 source until
 # that release lands on pub.dev. CI lays both sibling checkouts
 # alongside this repo under the workspace so relative paths
 # (`../../simple-permissions`, `../../simple-query`) resolve during
@@ -47,7 +47,7 @@ jobs:
           ref: main
           path: simple-permissions
 
-      - name: Checkout simple-query (sibling dep, pre-publish 0.6.0)
+      - name: Checkout simple-query (sibling dep, pre-publish 0.3.0)
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           repository: jake-dev-99/simple-query
@@ -78,8 +78,10 @@ jobs:
             echo "No test/ directory — skipping."
           fi
 
-      # Note: validate-publishability dry-run intentionally omitted in
-      # this Phase A revision. Main pubspec.yaml currently has path-deps
-      # that pub publish rejects (the path→hosted dep split lives in
-      # pubspec_overrides.yaml on develop). The step lands via the
-      # develop→main bridge merge in Phase B and comes back automatically.
+      - name: Test release tooling
+        if: matrix.package == 'simple_telephony_platform_interface'
+        working-directory: simple-telephony
+        run: python3 -m unittest discover -s tool -p 'test_*.py' -v
+
+      # Hosted publish checks require the dependency releases listed in
+      # docs/RELEASE.md. Sibling overrides here prove source compatibility.
