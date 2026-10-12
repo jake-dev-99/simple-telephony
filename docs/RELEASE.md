@@ -3,43 +3,56 @@
 `main`-only with tag-driven pub.dev publishing, per the Simple Zen
 Toolchain Architecture SOP.
 
-```
+```text
 feature branch
      │  PR  ▼  (CI runs)
     main
-     │  push to main ▼  (auto-tag bumps versions + tags commit)
-     │  tag push ▼      (deploy.yml runs OIDC pub.dev release)
+     │  release.yml workflow_dispatch ▼  (bumps + tags)
+     │  tag push ▼                       (deploy.yml runs OIDC publication)
     pub.dev
 ```
 
-## Branch intent
-
-| Branch | Role |
-|---|---|
-| `main` | Production. Feature branches PR directly here. The push to `main` triggers auto-tagging; the tag push triggers the pub.dev publish. |
-
-`develop` / `staging` branches were retired — solo-dev ops doesn't justify
-a multi-branch promotion pipeline. CI runs on every PR; CD runs on **tag
-push**, not on the merge.
-
 ## Cutting a release
 
-1. Land your work on `main` via a PR. CI runs; merge.
-2. The push to `main` triggers
-   [`auto-tag.yml`](../.github/workflows/auto-tag.yml). Per changed
-   package it:
-   - Reads the current `pubspec.yaml` version.
-   - Finds the highest existing `<package>-v<semver>` tag.
-   - Picks `max(pubspec_version, highest_tag + 0.0.1)`.
-   - Rewrites the pubspec, commits with `[skip ci]`, tags, pushes.
-3. The tag push fires
-   [`deploy.yml`](../.github/workflows/deploy.yml), which verifies the
-   tag version matches `pubspec.yaml` and runs `dart pub publish
-   --force` via OIDC.
+1. Land the reviewed change through a PR to `main`.
+2. Dispatch [`release.yml`](../.github/workflows/release.yml) on `main`,
+   selecting one package and a `patch`, `minor`, or `major` increment.
+   The workflow increments that package's current source version, prepends
+   its CHANGELOG entry, commits, tags, and pushes. It does not rewrite
+   dependency constraints. `dry_run=true` previews the version and notes;
+   this workflow does not validate dependency resolution or analysis.
+3. The tag triggers [`deploy.yml`](../.github/workflows/deploy.yml), which
+   verifies ancestry and version before publishing via OIDC. The current
+   publish step skips validation, so run resolution, analysis, tests, and
+   `flutter pub publish --dry-run` locally before cutting.
 
-**Shipping a minor or major release** is just *"bump the pubspec on the
-merge PR"*. The auto-tagger sees the pubspec is past its patch-bump
-candidate and respects the manual intent.
+## Current dependency release order
+
+The source interface removes the published `isDefaultDialerApp` and
+`requestDefaultDialerApp` methods and adds the call-log, device, SIM, and
+background-delivery APIs. Per `AGENTS.md`, this contract change requires
+coordinated major versions across the Telephony federation.
+
+Leave source versions for Cut Release to increment; selecting `major` from
+`0.1.1` produces `1.0.0`. Publish in dependency order, waiting for each
+prerequisite to appear on pub.dev:
+
+1. Publish `simple_query_android` and `simple_query` `0.3.0` and
+   `simple_permissions_native` `1.6.4` with its platform prerequisites.
+2. Cut `simple_telephony_platform_interface` with `major` (`1.0.0`).
+3. Cut `simple_telephony_android` with `major` (`1.0.0`); its floors are
+   `simple_query ^0.3.0` and `simple_telephony_platform_interface ^1.0.0`.
+4. Cut `simple_telephony_native` with `major` (`1.0.0`); both Telephony
+   dependency floors are `^1.0.0`. Its bundled example requires hosted
+   `simple_permissions_native ^1.6.4`.
+
+Do not select `all`: tag-triggered publish jobs run independently and can
+start before their prerequisites are published. Keep dependent PRs draft
+while those publications are unavailable. Development sibling overrides
+prove source compatibility only; remove them in isolated copies for the
+published dependency checks. For publication failures and manual retry
+caveats, consult the recovery notes in [Deploy](../.github/workflows/deploy.yml)
+before retrying.
 
 ## Tag patterns (one per federated package)
 

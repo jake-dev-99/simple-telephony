@@ -7,11 +7,11 @@ dependency_overrides:
     path: ../simple_telephony_platform_interface
   simple_telephony_android:
     path: ../simple_telephony_android
-  # simple_telephony_android pulls simple_query ^0.6.0
-  # transitively but pub.dev only has 0.2.0 published. Override
+  # simple_telephony_android pulls simple_query ^0.3.0
+  # transitively but pub.dev only has 0.2.3 published. Override
   # simple_query (and its federated siblings) to the in-flight
-  # 0.6.0 source so resolution succeeds. Drop these once the
-  # simple-query 0.6.0 release lands on pub.dev.
+  # 0.3.0 source so resolution succeeds. Drop these once the
+  # simple-query 0.3.0 release lands on pub.dev.
   simple_query:
     path: ../../simple-query/packages/simple_query
   simple_query_platform_interface:
