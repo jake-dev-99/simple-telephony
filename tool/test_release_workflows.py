@@ -1,147 +1,143 @@
-"""Execute workflow shell steps against disposable packages and fake services.
-
-No GitHub, pub.dev, tags, commits, or pushes are performed by these tests.
-"""
+"""Exercise workflow argument routing, hosted Deploy boundary, and real CLI preview."""
+import json
 import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import unittest
+
+import yaml
+import test_release_coordinator as fixtures
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def shell_step(workflow, name):
-    lines = (ROOT / '.github/workflows' / workflow).read_text().splitlines()
-    start = lines.index('      - name: ' + name)
-    run = next(i for i in range(start + 1, len(lines))
-               if lines[i].startswith('        run: '))
-    if lines[run] != '        run: |':
-        return lines[run].removeprefix('        run: ')
-    block = []
-    for line in lines[run + 1:]:
-        if line and not line.startswith('          '):
-            break
-        block.append(line[10:])
-    return '\n'.join(block)
+def workflow(name):
+    # BaseLoader keeps YAML's `on` key as a string rather than a YAML 1.1 boolean.
+    return yaml.load((ROOT / '.github/workflows' / name).read_text(), Loader=yaml.BaseLoader)
 
 
-class ReleaseWorkflowsTest(unittest.TestCase):
+def shell_step(name, step_name):
+    for job in workflow(name)['jobs'].values():
+        for step in job['steps']:
+            if step.get('name') == step_name:
+                return step['run']
+    raise AssertionError('Missing workflow step: ' + step_name)
+
+
+class WorkflowTest(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        shutil.copytree(ROOT / 'tool', self.root / 'tool',
-                        ignore=shutil.ignore_patterns('__pycache__'))
         self.bin = self.root / 'bin'
         self.bin.mkdir()
-        self.env = dict(os.environ, PATH=str(self.bin) + ':' + os.environ['PATH'],
-                        PACKAGE='simple_telephony_android', BUMP='major',
-                        DRY_RUN='false')
-        self.package = self.root / 'simple_telephony_android'
-        self.package.mkdir()
-        (self.package / 'pubspec.yaml').write_text(
-            'name: simple_telephony_android\nversion: 0.1.1\n')
-        self.changelog = self.package / 'CHANGELOG.md'
-        self.changelog.write_text(
-            '## Unreleased\n\n### Changed\n- Require Query 0.3.0.\n\n'
-            '## 0.1.1\n\n- Previous notes.\n')
-        self.install_fake('git', '''#!/usr/bin/env bash
-case "$1" in
-  log) printf '%s\\n' '- Fix dependency floors' ;;
-  tag) if [ "${2:-}" = '-a' ]; then exit 0; fi ;;
-  diff|rev-parse|ls-remote) exit 1 ;;
-  add|commit|push) exit 0 ;;
-  *) echo "Unexpected git operation: $*" >&2; exit 99 ;;
-esac
-''')
+        self.env = dict(os.environ, PATH=str(self.bin)+':'+os.environ['PATH'],
+                        EVENT_NAME='workflow_dispatch', OPERATION='cut', PACKAGE='all',
+                        BUMP='minor', DRY_RUN='false')
 
-    def install_fake(self, name, contents):
-        script = self.bin / name
-        script.write_text(contents)
-        script.chmod(0o755)
+    def fake(self, name, code):
+        file = self.bin / name
+        file.write_text(code)
+        file.chmod(0o755)
 
-    def run_step(self, workflow, name, cwd=None):
-        return subprocess.run(['bash', '-euo', 'pipefail', '-c',
-                               shell_step(workflow, name)],
-                              cwd=cwd or self.root, env=self.env,
-                              text=True, capture_output=True)
+    def step(self, workflow_name, name, cwd=None):
+        return subprocess.run(['bash', '-euo', 'pipefail', '-c', shell_step(workflow_name, name)],
+                              cwd=cwd or self.root, env=self.env, text=True, capture_output=True)
 
-    def test_cut_moves_authored_notes_into_the_new_version(self):
-        result = self.run_step('release.yml', 'Cut release')
+    def route(self):
+        self.fake('python3', '#!/usr/bin/env bash\nprintf "%s\\n" "$@"\n')
+        result = self.step('release.yml', 'Coordinate batch release')
         self.assertEqual(result.returncode, 0, result.stderr)
-        content = self.changelog.read_text()
-        self.assertTrue(content.startswith('## 1.0.0\n\n'))
-        self.assertNotIn('## Unreleased', content)
-        release, history = content.split('## 0.1.1', 1)
-        self.assertIn('### Changed\n- Require Query 0.3.0.', release)
-        self.assertIn('- Fix dependency floors', release)
-        self.assertEqual(history, '\n\n- Previous notes.\n')
-        self.assertEqual(content.count('Require Query 0.3.0.'), 1)
+        return result.stdout.splitlines()
 
-    def test_dry_run_previews_authored_notes_without_changing_files(self):
-        self.env['DRY_RUN'] = 'true'
-        before = self.changelog.read_text()
-        result = self.run_step('release.yml', 'Cut release')
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn('Require Query 0.3.0.', result.stdout)
-        self.assertEqual(self.changelog.read_text(), before)
-        self.assertIn('version: 0.1.1',
-                      (self.package / 'pubspec.yaml').read_text())
+    def test_manual_batch_and_preview_reach_coordinator_without_shell_expansion(self):
+        self.env.update(PACKAGE='all', DRY_RUN='true')
+        self.assertEqual(self.route(), ['tool/release_coordinator.py', '--operation', 'cut',
+                         '--package', 'all', '--bump', 'minor', '--dry-run'])
+        self.env.update(PACKAGE='$(exit 91)')
+        self.assertIn('$(exit 91)', self.route())
 
-    def test_cut_without_unreleased_preserves_existing_history(self):
-        self.changelog.write_text('## 0.1.1\n\n- Previous notes.\n')
-        result = self.run_step('release.yml', 'Cut release')
-        self.assertEqual(result.returncode, 0, result.stderr)
-        content = self.changelog.read_text()
-        self.assertTrue(content.startswith('## 1.0.0\n\n- Fix dependency floors'))
-        self.assertTrue(content.endswith('## 0.1.1\n\n- Previous notes.\n'))
-        self.assertEqual(content.count('## 0.1.1'), 1)
+    def test_hourly_schedule_only_resumes_authorized_work(self):
+        self.env.update(EVENT_NAME='schedule', OPERATION='cut', DRY_RUN='true')
+        self.assertEqual(self.route(), ['tool/release_coordinator.py', '--operation', 'resume', '--scheduled'])
 
-    def test_facade_cut_consumes_its_own_authored_notes(self):
-        facade = self.root / 'simple_telephony_native'
-        self.package.rename(facade)
-        self.env['PACKAGE'] = 'simple_telephony_native'
-        result = self.run_step('release.yml', 'Cut release')
-        self.assertEqual(result.returncode, 0, result.stderr)
-        content = (facade / 'CHANGELOG.md').read_text()
-        self.assertTrue(content.startswith('## 1.0.0\n\n'))
-        self.assertNotIn('## Unreleased', content)
-        self.assertIn('Require Query 0.3.0.', content.split('## 0.1.1')[0])
+    def test_resume_and_cancel_reach_same_coordinator(self):
+        for operation in ['resume', 'cancel']:
+            self.env['OPERATION'] = operation
+            self.assertEqual(self.route()[1:3], ['--operation', operation])
 
-    def test_cut_creates_missing_changelog(self):
-        self.changelog.unlink()
-        result = self.run_step('release.yml', 'Cut release')
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(self.changelog.read_text(),
-                         '## 1.0.0\n\n- Fix dependency floors\n\n')
+    def test_workflows_are_valid_and_all_shell_blocks_parse(self):
+        packages = json.loads((ROOT / 'tool/release-packages.json').read_text())
+        release = workflow('release.yml')
+        self.assertEqual(set(release['on']['workflow_dispatch']['inputs']['package']['options']), set(packages)|{'all'})
+        self.assertEqual(release['permissions']['actions'], 'write')
+        self.assertEqual(release['concurrency']['cancel-in-progress'], 'false')
+        self.assertTrue(release['on']['schedule'])
+        for file in (ROOT / '.github/workflows').glob('*.yml'):
+            parsed = yaml.load(file.read_text(), Loader=yaml.BaseLoader)
+            for job in parsed.get('jobs', {}).values():
+                for step in job.get('steps', []):
+                    if 'run' in step:
+                        result = subprocess.run(['bash', '-n'], input=step['run'], text=True, capture_output=True)
+                        self.assertEqual(result.returncode, 0, str(file)+': '+result.stderr)
 
-    def test_deploy_resolves_hosted_dependencies_without_sibling_checkouts(self):
-        (self.package / 'pubspec_overrides.yaml').write_text(
-            'dependency_overrides:\n  simple_query:\n'
-            '    path: ../../simple-query/packages/simple_query\n')
-        example = self.package / 'example'
-        example.mkdir()
-        (example / 'pubspec.yaml').write_text('name: example\n')
+    def test_deploy_removes_overrides_before_hosted_resolution(self):
+        package = self.root / 'package'
+        package.mkdir()
+        (package / 'pubspec.yaml').write_text('name: fixture\nversion: 1.0.0\n')
+        (package / 'pubspec_overrides.yaml').write_text('dependency_overrides: {}\n')
+        example = package / 'example'; example.mkdir()
         (example / 'pubspec_overrides.yaml').write_text('dependency_overrides: {}\n')
-        original = (self.package / 'pubspec.yaml').read_text()
-        self.install_fake('flutter', '''#!/usr/bin/env bash
-if [ -n "$(find . -name pubspec_overrides.yaml -type f -print -quit)" ]; then
-  echo 'Missing sibling checkout selected by development overrides' >&2
-  exit 21
-fi
-if [ "$*" != 'pub get --no-example' ]; then
-  echo "Unexpected Flutter operation: $*" >&2
-  exit 22
-fi
+        self.fake('flutter', '''#!/usr/bin/env bash
+if [ -n "$(find . -name pubspec_overrides.yaml -type f -print -quit)" ]; then exit 91; fi
+if [ "$1 $2" != 'pub get' ]; then exit 92; fi
 ''')
-        result = self.run_step('deploy.yml', 'Install dependencies', self.package)
+        result = self.step('deploy.yml', 'Install dependencies', package)
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertFalse((self.package / 'pubspec_overrides.yaml').exists())
+        self.assertFalse((package / 'pubspec_overrides.yaml').exists())
         self.assertFalse((example / 'pubspec_overrides.yaml').exists())
-        self.assertEqual((self.package / 'pubspec.yaml').read_text(), original)
+
+    def test_actual_cli_preview_uses_source_graph_and_leaves_remote_untouched(self):
+        fixture = fixtures.CoordinatorTest()
+        fixture.setUp()
+        self.addCleanup(fixture.doCleanups)
+        root = fixture.root
+        (root / 'tool').mkdir()
+        for file in ROOT.glob('tool/release_*.py'):
+            shutil.copy2(file, root / 'tool' / file.name)
+        (root / 'tool/release-packages.json').write_text(json.dumps(fixture.fixture.packages))
+        calls = []
+        class Handler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                calls.append(self.path)
+                response = [] if self.path.startswith('/repos/') else fixture.pub.package(self.path.rsplit('/',1)[1])
+                self.send_response(200); self.end_headers()
+                self.wfile.write(json.dumps(response).encode())
+            def do_POST(self):
+                calls.append('MUTATION'); self.send_error(500)
+            do_PATCH = do_POST
+            def log_message(self, *args): pass
+        server = ThreadingHTTPServer(('127.0.0.1',0), Handler)
+        threading.Thread(target=server.serve_forever,daemon=True).start()
+        self.addCleanup(server.server_close); self.addCleanup(server.shutdown)
+        url = f'http://127.0.0.1:{server.server_port}'
+        (self.bin / 'flutter').symlink_to(root / 'fake-flutter')
+        env = {**fixture.repo.env, **self.env, 'GITHUB_API_URL':url, 'PUB_HOSTED_URL':url,
+               'GH_TOKEN':'fixture-token','GITHUB_REPOSITORY':'owner/repo','GITHUB_RUN_ID':'12345'}
+        before = fixture.fixture.git('ls-remote','origin')
+        result = subprocess.run([sys.executable, 'tool/release_coordinator.py', '--dry-run'],
+                                cwd=root, env=env, text=True, capture_output=True)
+        self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+        self.assertIn('demo_android',result.stdout)
+        self.assertTrue(fixture.trace.exists())
+        self.assertEqual(fixture.fixture.git('ls-remote','origin'),before)
+        self.assertNotIn('MUTATION',calls)
+        self.assertIsNone(fixture.journal.load())
 
 
-if __name__ == '__main__':
-    unittest.main()
+if __name__ == '__main__': unittest.main()
