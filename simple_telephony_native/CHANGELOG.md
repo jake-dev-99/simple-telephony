@@ -1,3 +1,7 @@
+## Unreleased
+
+- Require the coordinated Android and platform-interface ^1.0.0 releases. The bundled example now requires hosted simple_permissions_native ^1.6.4; sibling paths remain development-only overrides.
+
 ## 0.1.1
 
 ### Reset to align with pub.dev's published series

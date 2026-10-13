@@ -1,7 +1,7 @@
 # Local-dev override for the in-repo sibling. pub publish
 # ignores this file. simple_query is overridden to the sibling
 # repo path so this package compiles against the new
-# 0.6.0 API surface (pub.dev still has 0.2.0 until the
+# 0.3.0 API surface (pub.dev still has 0.2.3 until the
 # coordinated simple-query release ships).
 dependency_overrides:
   simple_telephony_platform_interface:

@@ -34,25 +34,19 @@ class SimpleTelephonyAndroid extends MethodChannelSimpleTelephony {
     int? limit,
     int? offset,
   }) async {
-    try {
-      final response = await sq.SimpleQuery.instance.query(
-        sq.QueryRequest(
-          domain: sq.QueryDomain.calls,
-          filters: _buildCallLogFilters(filter),
-          sort: _buildCallLogSort(sort ?? CallLogSort.mostRecent),
-          page: (limit != null || offset != null)
-              ? sq.QueryPage(limit: limit, offset: offset)
-              : null,
-        ),
-      );
-      return response.records
-          .map((row) => _callLogEntryFromRaw(Map<String, Object?>.from(row)))
-          .toList(growable: false);
-    } catch (e, s) {
-      debugPrint('simple_telephony: Failed to list call log ($filter): $e');
-      debugPrint(s.toString());
-      return const [];
-    }
+    final response = await sq.SimpleQuery.instance.query(
+      sq.QueryRequest(
+        domain: sq.QueryDomain.calls,
+        filters: _buildCallLogFilters(filter),
+        sort: _buildCallLogSort(sort ?? CallLogSort.mostRecent),
+        page: (limit != null || offset != null)
+            ? sq.QueryPage(limit: limit, offset: offset)
+            : null,
+      ),
+    );
+    return response.records
+        .map((row) => _callLogEntryFromRecord(Map<String, Object?>.from(row)))
+        .toList(growable: false);
   }
 
   List<sq.QueryFilterCondition> _buildCallLogFilters(CallLogFilter? filter) {
@@ -62,21 +56,21 @@ class SimpleTelephonyAndroid extends MethodChannelSimpleTelephony {
     final types = filter.types;
     if (types != null && types.isNotEmpty) {
       conditions.add(sq.QueryFilterCondition(
-        field: 'type',
+        field: 'callType',
         operator: sq.QueryFilterOperator.inList,
         value: types.map(_callTypeToValue).map((v) => v.toString()).toList(),
       ));
     }
     if (filter.dateFrom != null) {
       conditions.add(sq.QueryFilterCondition(
-        field: 'date',
+        field: 'timestamp',
         operator: sq.QueryFilterOperator.greaterThanOrEqual,
         value: filter.dateFrom!.millisecondsSinceEpoch.toString(),
       ));
     }
     if (filter.dateTo != null) {
       conditions.add(sq.QueryFilterCondition(
-        field: 'date',
+        field: 'timestamp',
         operator: sq.QueryFilterOperator.lessThanOrEqual,
         value: filter.dateTo!.millisecondsSinceEpoch.toString(),
       ));
@@ -90,14 +84,14 @@ class SimpleTelephonyAndroid extends MethodChannelSimpleTelephony {
     }
     if (filter.subscriptionId != null) {
       conditions.add(sq.QueryFilterCondition(
-        field: 'subscription_id',
+        field: 'subscriptionId',
         operator: sq.QueryFilterOperator.equals,
         value: filter.subscriptionId.toString(),
       ));
     }
     if (filter.isNew != null) {
       conditions.add(sq.QueryFilterCondition(
-        field: 'new',
+        field: 'isNew',
         operator: sq.QueryFilterOperator.equals,
         value: filter.isNew! ? '1' : '0',
       ));
@@ -107,8 +101,8 @@ class SimpleTelephonyAndroid extends MethodChannelSimpleTelephony {
 
   List<sq.QuerySort> _buildCallLogSort(CallLogSort sort) {
     final column = switch (sort.field) {
-      CallLogSortField.date => 'date',
-      CallLogSortField.duration => 'duration',
+      CallLogSortField.date => 'timestamp',
+      CallLogSortField.duration => 'durationSec',
     };
     final dir = sort.direction == SortDirection.ascending
         ? sq.QuerySortDirection.ascending
@@ -116,23 +110,24 @@ class SimpleTelephonyAndroid extends MethodChannelSimpleTelephony {
     return [sq.QuerySort(field: column, direction: dir)];
   }
 
-  CallLogEntry _callLogEntryFromRaw(Map<String, Object?> raw) {
+  CallLogEntry _callLogEntryFromRecord(Map<String, Object?> record) {
     int? asInt(Object? v) =>
         v is int ? v : (v is String ? int.tryParse(v) : null);
     bool asBool(Object? v) => v == 1 || v == true || v == '1' || v == 'true';
 
     return CallLogEntry(
-      id: asInt(raw['_id'] ?? raw['id']) ?? 0,
-      number: raw['number'] as String?,
-      name: raw['name'] as String?,
-      type: _valueToCallType(asInt(raw['type']) ?? 0),
-      date: DateTime.fromMillisecondsSinceEpoch(asInt(raw['date']) ?? 0),
-      duration: Duration(seconds: asInt(raw['duration']) ?? 0),
-      isNew: asBool(raw['new']),
-      isRead: asBool(raw['is_read']),
-      geocodedLocation: raw['geocoded_location'] as String?,
-      subscriptionId: asInt(raw['subscription_id']),
-      sourceMap: raw,
+      id: asInt(record['id']) ?? 0,
+      number: record['number'] as String?,
+      name: record['name'] as String?,
+      type: _valueToCallType(asInt(record['callType']) ?? 0),
+      date:
+          DateTime.fromMillisecondsSinceEpoch(asInt(record['timestamp']) ?? 0),
+      duration: Duration(seconds: asInt(record['durationSec']) ?? 0),
+      isNew: asBool(record['isNew']),
+      isRead: asBool(record['isRead']),
+      geocodedLocation: record['geocodedLocation'] as String?,
+      subscriptionId: asInt(record['subscriptionId']),
+      sourceMap: record,
     );
   }
 

@@ -1,3 +1,8 @@
+## Unreleased
+
+- Use Query's canonical call-log fields for filters, sorting, and records. Surface query failures to callers instead of returning an empty history.
+- Require simple_query ^0.3.0 and simple_telephony_platform_interface ^1.0.0 so published consumers use the current query error mapping and Telephony contract.
+
 ## 0.1.1
 
 ### Reset to align with pub.dev's published series

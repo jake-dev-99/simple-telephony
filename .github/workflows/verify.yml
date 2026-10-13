@@ -9,7 +9,7 @@ name: Verify
 #
 # simple_telephony_native path-overrides simple-permissions for
 # PermissionGuards during pre-publish cycles, and simple_telephony_*
-# packages override simple-query to its in-flight 0.6.0 source until
+# packages override simple-query to its in-flight 0.3.0 source until
 # that release lands on pub.dev. CI lays both sibling checkouts
 # alongside this repo under the workspace so relative paths
 # (`../../simple-permissions`, `../../simple-query`) resolve during
@@ -23,6 +23,29 @@ on:
   workflow_dispatch:
 
 jobs:
+  release-tooling:
+    name: Batch release recovery tests
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_SDK_SMOKE: 'true'
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+      - name: Validate workflow syntax
+        run: |
+          set -euo pipefail
+          curl -fLsS https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz -o "$RUNNER_TEMP/actionlint.tar.gz"
+          echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  $RUNNER_TEMP/actionlint.tar.gz" | sha256sum --check
+          tar -xzf "$RUNNER_TEMP/actionlint.tar.gz" -C "$RUNNER_TEMP" actionlint
+          "$RUNNER_TEMP/actionlint" .github/workflows/release.yml .github/workflows/deploy.yml .github/workflows/verify.yml
+      - run: python3 -m pip install -r tool/release-requirements.txt
+      - run: python3 -m unittest discover -s tool -p 'test_*.py' -v
+
   package-tests:
     name: Analyze + test (${{ matrix.package }})
     runs-on: ubuntu-latest
@@ -47,7 +70,7 @@ jobs:
           ref: main
           path: simple-permissions
 
-      - name: Checkout simple-query (sibling dep, pre-publish 0.6.0)
+      - name: Checkout simple-query (sibling dep, pre-publish 0.3.0)
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           repository: jake-dev-99/simple-query
@@ -78,8 +101,5 @@ jobs:
             echo "No test/ directory — skipping."
           fi
 
-      # Note: validate-publishability dry-run intentionally omitted in
-      # this Phase A revision. Main pubspec.yaml currently has path-deps
-      # that pub publish rejects (the path→hosted dep split lives in
-      # pubspec_overrides.yaml on develop). The step lands via the
-      # develop→main bridge merge in Phase B and comes back automatically.
+      # Hosted publish checks require the dependency releases listed in
+      # the Linear procedure linked from AGENTS.md. Sibling overrides prove source compatibility.
