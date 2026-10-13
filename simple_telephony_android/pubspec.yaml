@@ -1,7 +1,7 @@
 name: simple_telephony_android
 description: >-
   Android implementation of the simple_telephony_native plugin.
-version: 0.1.2
+version: 0.1.1
 homepage: https://www.simplezen.io/development
 repository: https://github.com/simplezen/simple-telephony
 issue_tracker: https://github.com/simplezen/simple-telephony/issues
@@ -25,11 +25,15 @@ dependencies:
 
   # Hosted constraints for `pub publish`. Path overrides for
   # local development live in `pubspec_overrides.yaml`.
-  simple_query: ^0.2.0
-  simple_telephony_platform_interface: ^0.1.0
+  # 0.3.0 shares the mapped host-error contract used by simple-sms.
+  simple_query: ^0.3.0
+  # The current interface removed the published dialer-role methods.
+  # Publish its coordinated major release before this implementation.
+  simple_telephony_platform_interface: ^1.0.0
 
 dev_dependencies:
   flutter_lints: ^5.0.0
+  simple_query_platform_interface: ^0.2.2
   flutter_test:
     sdk: flutter
 

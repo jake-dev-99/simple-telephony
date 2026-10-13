@@ -1,0 +1,5 @@
+{
+  "simple_telephony_native": "simple_telephony_native",
+  "simple_telephony_platform_interface": "simple_telephony_platform_interface",
+  "simple_telephony_android": "simple_telephony_android"
+}
