@@ -42,7 +42,7 @@ jobs:
           curl -fLsS https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz -o "$RUNNER_TEMP/actionlint.tar.gz"
           echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  $RUNNER_TEMP/actionlint.tar.gz" | sha256sum --check
           tar -xzf "$RUNNER_TEMP/actionlint.tar.gz" -C "$RUNNER_TEMP" actionlint
-          "$RUNNER_TEMP/actionlint" .github/workflows/release.yml .github/workflows/deploy.yml .github/workflows/verify.yml
+          "$RUNNER_TEMP/actionlint" .github/workflows/release.yml .github/workflows/deploy.yml .github/workflows/verify.yml .github/workflows/verify-native.yml
       - run: python3 -m pip install -r tool/release-requirements.txt
       - run: python3 -m unittest discover -s tool -p 'test_*.py' -v
 
@@ -63,6 +63,15 @@ jobs:
         with:
           path: simple-telephony
 
+      # Sibling plugins below (simple-permissions, simple-query) are checked
+      # out at `ref: main` — an ACCEPTED non-hermeticity tradeoff (UNFY-200,
+      # mirroring simple-sms UNFY-189), captured here so it stays a
+      # deliberate decision rather than a silent one. The job builds against
+      # the siblings' moving `main`, not a coordinated revision, so a sibling
+      # push can flip this repo's CI with no change here. If sibling-drift
+      # flakiness becomes a real cost, tighten both workflows that check
+      # them out (verify.yml / verify-native.yml) to pinned revisions
+      # (pubspec.lock / pubspec_overrides) or release tags.
       - name: Checkout simple-permissions (sibling dep)
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:

@@ -1,0 +1,157 @@
+name: Verify (native)
+
+# Native Kotlin compile + JVM (Robolectric) unit tests for
+# `simple_telephony_android/android/` — the half of the codebase the
+# Dart-only `verify.yml` (`flutter test`) never compiles or touches.
+#
+# WHY THIS EXISTS (UNFY-199). The Telecom stack (`CallStore`,
+# `TelecomModels`, `ForegroundChannelBridge`) is covered by Robolectric
+# tests under `simple_telephony_android/android/src/test/`, but no workflow
+# ran them, so a Kotlin regression could reach `main` with zero Kotlin
+# compiled or tested. This is the gate simple-sms added for the same hole
+# (UNFY-162), ported to this repo's federated layout.
+#
+# COST CONTROL. Path-gated to the Android implementation, the example app's
+# Android project, the dependency manifests on the example → facade →
+# Android-implementation chain, and this workflow itself. Dart-only and docs
+# PRs skip it. `simple_telephony_platform_interface` is pure Dart and never
+# reaches the native build, so it is not a trigger.
+#
+# A bare `:simple_telephony_android` Gradle invocation can't configure on
+# its own: the plugin module and its sibling plugin modules
+# (`:simple_query_android`, `:simple_permissions_android`) resolve only via
+# Flutter's plugin loader, applied in the *app's* settings, which also
+# require `flutter.sdk` in `local.properties`. So `flutter build apk` in the
+# example app injects the gitignored gradlew wrapper + `local.properties`
+# and compiles the native side, then the unit tests run against that
+# already-configured build.
+#
+# External GitHub Actions are pinned to a full commit SHA (not a floating
+# tag) for supply-chain safety, with a human-readable version comment — same
+# convention as verify.yml / deploy.yml.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'simple_telephony_android/android/**'
+      - 'simple_telephony_native/example/android/**'
+      # Dependency changes alter what the native side compiles against
+      # (e.g. `:simple_query_android`, `:simple_permissions_android`), so a
+      # manifest-only PR must still run the gate. Pub reads overrides only
+      # from the root package, so the example's pubspec_overrides.yaml is the
+      # only overrides file this build uses.
+      - 'simple_telephony_android/pubspec.yaml'
+      - 'simple_telephony_native/pubspec.yaml'
+      - 'simple_telephony_native/example/pubspec.yaml'
+      - 'simple_telephony_native/example/pubspec_overrides.yaml'
+      - '.github/workflows/verify-native.yml'
+  # Manual override for re-running the native gate against a specific ref.
+  workflow_dispatch:
+
+# A newer push to the same PR supersedes the in-flight run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native-unit-tests:
+    name: Native build + unit tests
+    runs-on: ubuntu-latest
+    # Typical run is under 10 minutes; a hung build or test fails fast
+    # instead of holding the PR check for GitHub's 6-hour default.
+    timeout-minutes: 30
+    permissions:
+      contents: read  # checkout only; least-privilege (zizmor)
+
+    steps:
+      - name: Checkout simple-telephony
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false  # no later step does authenticated git ops (zizmor artipacked)
+          path: simple-telephony
+
+      # Sibling plugins below (simple-permissions, simple-query) are checked
+      # out at `ref: main` — an ACCEPTED non-hermeticity tradeoff (UNFY-200,
+      # mirroring simple-sms UNFY-189), captured here so it stays a
+      # deliberate decision rather than a silent one. The job builds against
+      # the siblings' moving `main`, not a coordinated revision, so a sibling
+      # push can flip this repo's CI with no change here. If sibling-drift
+      # flakiness becomes a real cost, tighten both workflows that check
+      # them out (verify-native.yml / verify.yml) to pinned revisions
+      # (pubspec.lock / pubspec_overrides) or release tags.
+      - name: Checkout simple-permissions (sibling dep)
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+          repository: jake-dev-99/simple-permissions
+          ref: main
+          path: simple-permissions
+
+      - name: Checkout simple-query (sibling dep)
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+          repository: jake-dev-99/simple-query
+          ref: main
+          path: simple-query
+
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+
+      - name: Set up JDK 21 (Temurin)
+        # Provision JDK 21 explicitly rather than leaning on the runner's
+        # preinstalled $JAVA_HOME_21_X64 (brittle across runner images).
+        # setup-java exports JAVA_HOME for the build + test steps below.
+        # Version matches simple_telephony_android/android/build.gradle
+        # (JavaVersion.VERSION_21).
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4.8.0
+        with:
+          distribution: temurin
+          java-version: '21'
+          # Cache ~/.gradle (downloaded dependencies + wrapper dists — the
+          # bulk of this gate's wall time) via setup-java's built-in Gradle
+          # cache, which keeps the SHA-pinned action set unchanged (simple-sms
+          # UNFY-190). Downloads only: task outputs are NOT cached, so the
+          # compile + unit tests still run fresh on every PR.
+          cache: gradle
+
+      - name: Resolve example app deps
+        working-directory: simple-telephony/simple_telephony_native/example
+        run: flutter pub get
+
+      - name: Compile native side (debug APK)
+        working-directory: simple-telephony/simple_telephony_native/example
+        # JAVA_HOME comes from setup-java (JDK 21). This step also injects
+        # the gradlew wrapper + local.properties consumed by the unit-test
+        # step below, and resolves the sibling plugin modules.
+        #
+        # No SDK packages are installed by this workflow, so no Android
+        # version is written here to drift from the build files. The Android
+        # Gradle Plugin installs a declared compileSdk platform the runner
+        # image lacks; runners accept the standard Android SDK license those
+        # packages use. Preview-licensed packages (beta NDKs, preview
+        # platforms) are NOT accepted there and fail the build, so the example
+        # app pins a stable ndkVersion that the runner image preinstalls.
+        run: flutter build apk --debug
+
+      - name: Run native JVM unit tests
+        working-directory: simple-telephony/simple_telephony_native/example/android
+        # Reuses the warm Gradle daemon the APK build left running (same JVM
+        # settings). `--no-daemon` would fork a second, cold single-use
+        # daemon instead. --stacktrace: full trace on failure (fail-loud
+        # stance).
+        run: ./gradlew :simple_telephony_android:testDebugUnitTest --console=plain --stacktrace
+
+      - name: Stop Gradle daemons
+        # setup-java's post step archives ~/.gradle/caches for the Gradle
+        # cache. Stop the daemons first so no live process holds locks or
+        # writes mid-archive. always(): the APK build's daemon outlives a
+        # failed step too.
+        if: always()
+        run: |
+          android_dir=simple-telephony/simple_telephony_native/example/android
+          if [ -x "$android_dir/gradlew" ]; then
+            (cd "$android_dir" && ./gradlew --stop)
+          fi
