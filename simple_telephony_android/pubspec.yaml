@@ -1,7 +1,7 @@
 name: simple_telephony_android
 description: >-
   Android implementation of the simple_telephony_native plugin.
-version: 0.1.1
+version: 0.1.2
 homepage: https://www.simplezen.io/development
 repository: https://github.com/simplezen/simple-telephony
 issue_tracker: https://github.com/simplezen/simple-telephony/issues
@@ -13,8 +13,8 @@ topics:
   - calling
 
 environment:
-  sdk: ">=3.6.0 <4.0.0"
-  flutter: ">=3.24.0"
+  sdk: ">=3.12.0 <4.0.0"
+  flutter: ">=3.44.0"
 
 dependencies:
   flutter:

@@ -1,3 +1,8 @@
+## 0.1.2
+
+- Updates the minimum supported SDK version to Flutter 3.44/Dart 3.12.
+- Migrates to built-in Kotlin.
+
 ## 0.1.1
 
 ### Reset to align with pub.dev's published series
