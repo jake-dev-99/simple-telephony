@@ -142,6 +142,12 @@ jobs:
         # settings). `--no-daemon` would fork a second, cold single-use
         # daemon instead. --stacktrace: full trace on failure (fail-loud
         # stance).
+        #
+        # Gradle 8.14 (example wrapper) is Flutter's minimum and pairs with the
+        # example app's AGP 8.11.1 (example/android/settings.gradle.kts), the
+        # plugin version the whole build runs with. The library's own
+        # buildscript pin (AGP 9.1.0 in simple_telephony_android/android/
+        # build.gradle) does not fail this build: CI runs it green on 8.14.
         run: ./gradlew :simple_telephony_android:testDebugUnitTest --console=plain --stacktrace
 
       - name: Stop Gradle daemons
