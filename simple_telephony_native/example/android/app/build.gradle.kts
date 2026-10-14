@@ -8,7 +8,7 @@ plugins {
 android {
     namespace = "com.example.simple_telephony_native_example"
     compileSdk = 36
-    ndkVersion = "30.0.14904198"
+    ndkVersion = "30.0.16248370"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21

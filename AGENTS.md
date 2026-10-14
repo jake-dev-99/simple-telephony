@@ -40,6 +40,23 @@ flutter analyze --no-fatal-warnings
 flutter test
 ```
 
+**When you touch `simple_telephony_android/android/` (Kotlin), also run the
+native gate.** `flutter test` is Dart-only — it never compiles or runs the
+Robolectric tests under `simple_telephony_android/android/src/test/`. They
+run through the *example app's* Gradle (a bare `:simple_telephony_android`
+invocation can't configure on its own), so build once to inject the wrapper
++ `local.properties`, then test. The example resolves `simple-permissions`
+and `simple-query` from sibling checkouts next to this repo, as CI lays them
+out:
+
+```sh
+(cd simple_telephony_native/example && flutter build apk --debug)
+(cd simple_telephony_native/example/android && ./gradlew :simple_telephony_android:testDebugUnitTest --console=plain)
+```
+
+CI runs the same gate on every PR that touches the native side
+(`.github/workflows/verify-native.yml`, path-gated; UNFY-199).
+
 ## Conventions that have teeth
 
 - **The platform-interface contract is versioned.** A breaking change to
@@ -73,7 +90,8 @@ hosted validation precedes each dependency-ordered tag. Execution and recovery l
   Android implementation — it breaks foreground event delivery in the
   consumer at runtime, silently at build time.
 - **Don't push without the verify gate green** (`analyze
-  --no-fatal-warnings` + `test`). CI is a backstop, not discovery.
+  --no-fatal-warnings` + `test`, plus the native gate when you touch
+  `simple_telephony_android/android/`). CI is a backstop, not discovery.
 - **Don't commit secrets.**
 - **Don't add app-level concerns** here (GTM, brand, product roadmap) —
   this is a library.
