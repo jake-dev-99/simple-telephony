@@ -1,3 +1,10 @@
+# Flutter stable adds these generated/native directory exclusions during pub get.
+# Commit them so release validation analyzes Dart source without rewriting it.
+analyzer:
+  exclude:
+    - build/**
+    - android/**
+
 # This file configures the analyzer, which statically analyzes Dart code to
 # check for errors, warnings, and lints.
 #
