@@ -1,3 +1,9 @@
+# Flutter stable adds these generated/native directory exclusions during pub get.
+# Commit them so release validation analyzes Dart source without rewriting it.
+analyzer:
+  exclude:
+    - build/**
+
 include: package:flutter_lints/flutter.yaml
 
 linter:
