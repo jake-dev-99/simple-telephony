@@ -1,6 +1,29 @@
-## Unreleased
+## 1.0.0
 
 - Require the coordinated Android and platform-interface ^1.0.0 releases. The bundled example now requires hosted simple_permissions_native ^1.6.4; sibling paths remain development-only overrides.
+
+- Merge pull request #60 from jake-dev-99/bug/unfy-345-frozen-archive-source
+- fix(UNFY-345): commit stable Flutter analyzer migration
+- ci(UNFY-199): add PR-time native unit-test gate (verify-native.yml)
+- fix(UNFY-345): require the coordinated Telephony dependency releases
+- chore(release): reset versions to align with pub.dev (smallest iteration)
+- chore(release): unblock pub publish for 0.5.0 — bump constraints + path overrides
+- chore/update-platform-imports
+- docs: genericize simple-permissions references in READMEs + comments
+- refactor: stop coupling simple_telephony to simple_permissions
+- Bumped Android Build Versions
+- fix(example): surface refresh errors in the UI instead of swallowing
+- fix(android): remove init races and binder-thread blocking in background bridge
+- refactor(dart): harden channel decoding and lift background ack to platform interface
+- ci: address review feedback + unblock CI
+- feat: delegate DeviceInfoHandler permission check to PermissionGuards
+- breaking: delegate dialer-role to simple_permissions_native
+- docs(example): add federation-root example app
+- chore(pubspec): add repository, issue_tracker + topics across federation
+- feat(android): native CallUiLauncher seam for host-owned incoming-call UI (0.3.0)
+- refactor(android): rename Kotlin package simple_telecom -> simple_telephony
+- feat(telephony): call log, device info, SIM cards; fix facade class names
+- Additional Enhancements
 
 ## 0.1.1
 

@@ -1,3 +1,23 @@
+## 1.0.0
+
+- fix(UNFY-345): commit stable Flutter analyzer migration
+- chore(release): reset versions to align with pub.dev (smallest iteration)
+- fix: address Copilot + Sourcery review on PR #23
+- docs: genericize simple-permissions references in READMEs + comments
+- docs(platform_interface): make UnimplementedError messages actionable
+- refactor(platform_interface): make events stream `late final` instead of lazy getter with side effect
+- refactor(dart): harden channel decoding and lift background ack to platform interface
+- ci: address review feedback + unblock CI
+- feat: delegate DeviceInfoHandler permission check to PermissionGuards
+- breaking: delegate dialer-role to simple_permissions_native
+- chore(pubspec): add repository, issue_tracker + topics across federation
+- feat(android): native CallUiLauncher seam for host-owned incoming-call UI (0.3.0)
+- refactor(android): rename Kotlin package simple_telecom -> simple_telephony
+- feat(telephony): call log, device info, SIM cards; fix facade class names
+- Additional Enhancements
+- Implemented Federation
+- Implemented Federation
+
 ## 0.1.1
 
 ### Reset to align with pub.dev's published series

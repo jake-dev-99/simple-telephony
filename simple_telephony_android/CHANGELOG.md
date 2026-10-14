@@ -1,9 +1,39 @@
-## Unreleased
+## 1.0.0
 
 - Use Query's canonical call-log fields for filters, sorting, and records. Surface query failures to callers instead of returning an empty history.
 - Require simple_query ^0.3.0 and simple_telephony_platform_interface ^1.0.0 so published consumers use the current query error mapping and Telephony contract.
 - Updates the minimum supported SDK version to Flutter 3.44/Dart 3.12.
 - Migrates to built-in Kotlin.
+
+- fix(UNFY-345): commit stable Flutter analyzer migration
+- Merge origin/main into claude/cool-dijkstra-voftkl (UNFY-175)
+- chore(UNFY-175): migrate simple_telephony_android to Built-in Kotlin
+- fix(UNFY-345): align call history and release tooling with hosted dependencies
+- fix(UNFY-345): require the coordinated Telephony dependency releases
+- fix(unfy-176): per-engine foreground bridge so detach can't clobber another engine
+- fix(telephony_android): untrack android/gradlew (contradicts .gitignore)
+- fix(telephony_android): add .pubignore to exclude android/gradlew
+- chore(release): reset versions to align with pub.dev (smallest iteration)
+- fix: address Copilot + Sourcery review on PR #23
+- chore(release): unblock pub publish for 0.5.0 — bump constraints + path overrides
+- chore/update-platform-imports
+- refactor: stop coupling simple_telephony to simple_permissions
+- Bumped Android Build Versions
+- fix(android): wrap TelecomMethodHandler in a top-level try/catch
+- fix(android): remove init races and binder-thread blocking in background bridge
+- ci: address review feedback + unblock CI
+- feat: delegate DeviceInfoHandler permission check to PermissionGuards
+- breaking: delegate dialer-role to simple_permissions_native
+- chore(pubspec): add repository, issue_tracker + topics across federation
+- feat(android): native CallUiLauncher seam for host-owned incoming-call UI (0.3.0)
+- refactor(android): rename Kotlin package simple_telecom -> simple_telephony
+- feat(telephony): call log, device info, SIM cards; fix facade class names
+- refactor(android): drop vestigial local Registrar class
+- Additional Enhancements
+- Improved Deployment Script
+- Improved Deployment Script
+- Implemented Federation
+- Implemented Federation
 
 ## 0.1.1
 
