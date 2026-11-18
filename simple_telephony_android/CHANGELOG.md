@@ -1,3 +1,7 @@
+## Unreleased
+
+- Updates the minimum supported SDK version to Flutter 3.47.7/Dart 3.13 (UNFY-410).
+
 ## 1.0.0
 
 - Use Query's canonical call-log fields for filters, sorting, and records. Surface query failures to callers instead of returning an empty history.

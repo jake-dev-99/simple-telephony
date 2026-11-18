@@ -1,3 +1,7 @@
+## Unreleased
+
+- Updates the minimum supported SDK version to Flutter 3.47.7/Dart 3.13 (UNFY-410).
+
 ## 1.0.0
 
 - Require the coordinated Android and platform-interface ^1.0.0 releases. The bundled example now requires hosted simple_permissions_native ^1.6.4; sibling paths remain development-only overrides.
