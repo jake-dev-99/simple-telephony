@@ -41,6 +41,13 @@ flutter analyze --no-fatal-warnings
 flutter test
 ```
 
+Every package and the example commits its `pubspec.lock` (CQS-DEP-02),
+resolved through the tracked `pubspec_overrides.yaml` links and the
+sibling checkouts, as CI resolves it. When `flutter pub get`
+or `flutter pub upgrade` changes a lockfile, including after a release
+changes the linked package versions, commit it. pub leaves `pubspec.lock`
+out of published packages.
+
 **When you touch `simple_telephony_android/android/` (Kotlin), also run the
 native gate.** `flutter test` is Dart-only — it never compiles or runs the
 Robolectric tests under `simple_telephony_android/android/src/test/`. They

@@ -30,7 +30,6 @@ migrate_working_dir/
 .pub/
 build/
 **/build/
-pubspec.lock
 
 # Symbolication / obfuscation
 app.*.symbols
