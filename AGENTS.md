@@ -30,8 +30,10 @@ platform implementations.
 
 ## Build · test · verify
 
-Every package needs Dart `>=3.13.0` / Flutter `>=3.47.7`. Mirror CI (`.github/workflows/verify.yml`), a
-per-package analyze + test matrix. Before any push, in each touched package:
+Every package needs Dart `>=3.13.0` / Flutter `>=3.47.7`;
+`simple_telephony_android` relies on Built-in Kotlin. The example's Android
+build (AGP 9.4.1, Gradle 9.8.1) is verified on Flutter 3.50. Mirror CI
+(`.github/workflows/verify.yml`), a per-package analyze + test matrix. Before any push, in each touched package:
 
 ```sh
 flutter pub get
