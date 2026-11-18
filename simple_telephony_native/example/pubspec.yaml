@@ -7,8 +7,8 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.6.0
-  flutter: '>=3.24.0'
+  sdk: ^3.13.0
+  flutter: '>=3.47.7'
 
 dependencies:
   flutter:
@@ -18,11 +18,12 @@ dependencies:
   # The bundled example must resolve outside the sibling development layout.
   simple_permissions_native: ^1.6.4
   cupertino_icons: ^1.0.8
+  material_ui: 1.11.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^6.0.0
+  flutter_lints: 6.0.0
 
 flutter:
   uses-material-design: true

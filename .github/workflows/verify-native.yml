@@ -143,11 +143,12 @@ jobs:
         # daemon instead. --stacktrace: full trace on failure (fail-loud
         # stance).
         #
-        # Gradle 8.14 (example wrapper) is Flutter's minimum and pairs with the
-        # example app's AGP 8.11.1 (example/android/settings.gradle.kts), the
-        # plugin version the whole build runs with. The library's own
-        # buildscript pin (AGP 9.1.0 in simple_telephony_android/android/
-        # build.gradle) does not fail this build: CI runs it green on 8.14.
+        # Gradle 9.8.1 (example wrapper) pairs with the example app's AGP
+        # 9.4.1 (example/android/settings.gradle.kts), the plugin version the
+        # whole build runs with; Flutter 3.50 needs AGP 9.1.1 and Gradle 9.3.1
+        # or later. The library's own buildscript pin (AGP 9.1.0 in
+        # simple_telephony_android/android/build.gradle) does not decide the
+        # version here: the example's AGP is the one that runs.
         run: ./gradlew :simple_telephony_android:testDebugUnitTest --console=plain --stacktrace
 
       - name: Stop Gradle daemons

@@ -30,15 +30,23 @@ platform implementations.
 
 ## Build · test · verify
 
-Dart `^3.6.0`; `simple_telephony_android` needs Dart `>=3.12.0` / Flutter
-`>=3.44.0` (Built-in Kotlin). Mirror CI (`.github/workflows/verify.yml`), a
-per-package analyze + test matrix. Before any push, in each touched package:
+Every package needs Dart `>=3.13.0` / Flutter `>=3.47.7`;
+`simple_telephony_android` relies on Built-in Kotlin. The example's Android
+build (AGP 9.4.1, Gradle 9.8.1) is verified on Flutter 3.50. Mirror CI
+(`.github/workflows/verify.yml`), a per-package analyze + test matrix. Before any push, in each touched package:
 
 ```sh
 flutter pub get
 flutter analyze --no-fatal-warnings
 flutter test
 ```
+
+Every package and the example commits its `pubspec.lock` (CQS-DEP-02),
+resolved through the tracked `pubspec_overrides.yaml` links and the
+sibling checkouts, as CI resolves it. When `flutter pub get`
+or `flutter pub upgrade` changes a lockfile, including after a release
+changes the linked package versions, commit it. pub leaves `pubspec.lock`
+out of published packages.
 
 **When you touch `simple_telephony_android/android/` (Kotlin), also run the
 native gate.** `flutter test` is Dart-only — it never compiles or runs the
